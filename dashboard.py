@@ -4,63 +4,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet, build_gantt_figure, semaine_vers_date, build_phasage_mensuel_chart
+from calculs import (
+    calcul_cout_tache, calcul_jh_tache, date_fin_projet, 
+    build_gantt_figure, semaine_vers_date, build_phasage_mensuel_chart
+)
+from data import ETAPES
 
-# ─────────────────────────────────────────────────────────────
-# DONNÉES SIMULÉES PAR ÉTAPE (JALONS)
-# ─────────────────────────────────────────────────────────────
-
-ETAPES = {
-    "Etape 1": {
-        "nom": "Étape 1 — Kick-off (Semaine 5)",
-        "semaine_fin": 5,
-        "pct_avancement_simule": 0.18, 
-        "retard_jours": 3,
-        "couts_non_planifies": 4000,
-        "details_risques": [
-            {"risque": "Librairie OCR plus complexe que prévu", "impact_fin": 4000, "impact_tps": "0", "domaine": "Tech"},
-            {"risque": "Refonte du flux d'onboarding Invité", "impact_fin": 0, "impact_tps": "+3 j", "domaine": "UX"}
-        ],
-        "meteo": {
-            "PM": "☀️", "TL": "🌤️", "BE": "🌤️", "MOB": "☀️", "UX": "🌧️", 
-            "QA": "☀️", "STG": "☀️", "ALT": "⛈️", "FRL": "☀️"
-        }
-    },
-    "Etape 2": {
-        "nom": "Étape 2 — Mi-parcours (Semaine 10)",
-        "semaine_fin": 10,
-        "pct_avancement_simule": 0.40, 
-        "retard_jours": 9,
-        "couts_non_planifies": 15000, 
-        "details_risques": [
-            {"risque": "Lenteurs géolocalisation spatiale", "impact_fin": 6000, "impact_tps": "0", "domaine": "Tech"},
-            {"risque": "Ajout des souhaits en urgence", "impact_fin": 5000, "impact_tps": "0", "domaine": "MOA"},
-            {"risque": "Absence Alternant (partiels)", "impact_fin": 0, "impact_tps": "+6 j", "domaine": "RH"},
-            {"risque": "Librairie OCR (Héritage étape 1)", "impact_fin": 4000, "impact_tps": "+0", "domaine": "Tech"}
-        ],
-        "meteo": {
-            "PM": "🌤️", "TL": "⛈️", "BE": "🌧️", "MOB": "🌤️", "UX": "☀️", 
-            "QA": "🌧️", "STG": "🌤️", "ALT": "⛈️", "FRL": "☀️"
-        }
-    },
-    "Etape 3": {
-        "nom": "Étape 3 — Livraison (Semaine 18)",
-        "semaine_fin": 18,
-        "pct_avancement_simule": 0.85, 
-        "retard_jours": 16,
-        "couts_non_planifies": 30500, 
-        "details_risques": [
-            {"risque": "Blocage KYC Stripe P2P", "impact_fin": 8000, "impact_tps": "0", "domaine": "Paiement"},
-            {"risque": "Refus Apple Store", "impact_fin": 2500, "impact_tps": "+7 j", "domaine": "Store"},
-            {"risque": "Desynchro WebSocket", "impact_fin": 5000, "impact_tps": "0", "domaine": "MOA"},
-            {"risque": "Héritage (Risques précédents)", "impact_fin": 15000, "impact_tps": "0", "domaine": "Projet"}
-        ],
-        "meteo": {
-            "PM": "🌧️", "TL": "⛈️", "BE": "⛈️", "MOB": "🌧️", "UX": "☀️", 
-            "QA": "⛈️", "STG": "🌤️", "ALT": "☀️", "FRL": "🌧️"
-        }
-    }
-}
 
 def cout_tache_a_semaine(t, equipe_index, jours_par_semaine, semaine_cible):
     if semaine_cible < t["semaine"]:
@@ -313,58 +262,3 @@ def build_dashboard_tab(taches, equipe_index, config):
     )
     st.plotly_chart(fig_phasage, use_container_width=True, key="phasage_dashboard")
 
-    st.divider()
-    # ── 4. GANTT COMPARATIF ──────────────────────────────────────────
-    st.markdown("### 📅 Comparatif des Plannings (Gantt)")
-    st.markdown("Visualisation de l'impact des retards sur le calendrier du projet.")
-    
-    # Simulation des tâches avec retard pour le Gantt réel
-    taches_simulees = copy.deepcopy(taches)
-    for t in taches_simulees:
-        fin_tache = t["semaine"] + t["duree"] - 1
-        
-        # Déterminer dans quelle étape la tâche se termine théoriquement
-        if fin_tache <= ETAPES["Etape 1"]["semaine_fin"]:
-            etape_fin_tache = 1
-        elif fin_tache <= ETAPES["Etape 2"]["semaine_fin"]:
-            etape_fin_tache = 2
-        else:
-            etape_fin_tache = 3
-            
-        # Déterminer l'étape courante que l'utilisateur est en train de visionner
-        if sem_actuelle <= ETAPES["Etape 1"]["semaine_fin"]:
-            etape_vision = 1
-        elif sem_actuelle <= ETAPES["Etape 2"]["semaine_fin"]:
-            etape_vision = 2
-        else:
-            etape_vision = 3
-            
-        # Le retard de la tâche est figé à l'étape où elle s'est terminée,
-        # dans la limite de l'étape actuellement visionnée (pour les tâches futures)
-        etape_effective = min(etape_fin_tache, etape_vision)
-        
-        if etape_effective == 1:
-            t["decalage_jours"] = ETAPES["Etape 1"]["retard_jours"]
-        elif etape_effective == 2:
-            t["decalage_jours"] = ETAPES["Etape 2"]["retard_jours"]
-        else:
-            t["decalage_jours"] = ETAPES["Etape 3"]["retard_jours"]
-            
-    fig_gantt_initial = build_gantt_figure(taches, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
-    fig_gantt_reel = build_gantt_figure(taches_simulees, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
-    
-    # On force la même échelle de temps (x-axis) sur les deux graphiques pour voir visuellement le décalage
-    min_date = min(semaine_vers_date(t["semaine"], config["date_debut"]) for t in taches) - timedelta(days=7)
-    max_date = max(semaine_vers_date(t["semaine"] + t["duree"], config["date_debut"]) + timedelta(days=t.get("decalage_jours", 0)) for t in taches_simulees) + timedelta(days=14)
-    
-    col_gantt1, col_gantt2 = st.columns(2)
-    
-    with col_gantt1:
-        st.markdown("#### Planning Initial (Baseline)")
-        fig_gantt_initial.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0), xaxis=dict(range=[min_date, max_date]))
-        st.plotly_chart(fig_gantt_initial, use_container_width=True)
-        
-    with col_gantt2:
-        st.markdown("#### Planning Réel (Projeté avec Décalages)")
-        fig_gantt_reel.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0), xaxis=dict(range=[min_date, max_date]))
-        st.plotly_chart(fig_gantt_reel, use_container_width=True)

@@ -13,12 +13,13 @@ from data import (
     COMPLEXITE_OPTIONS, COMPLEXITE_COULEURS, TYPE_RESSOURCE_OPTIONS,
     JOURS_OUVRES_PAR_AN, STATUTS_CONVENTION, TAUX_CHARGES_PATRONALES,
     STATUT_DEFAULT_PAR_TYPE, calcul_taux_jour,
-    COUTS_SATELLITES, PROVISION_RISQUE_PCT
+    COUTS_SATELLITES, PROVISION_RISQUE_PCT, ETAPES
 )
 from calculs import (
     calcul_kpis, build_gantt_figure, build_budget_chart,
     build_cat_chart, build_charge_chart, build_budget_dataframe,
-    calcul_cout_tache, calcul_jh_tache, build_phasage_mensuel_chart
+    calcul_cout_tache, calcul_jh_tache, build_phasage_mensuel_chart,
+    semaine_vers_date
 )
 from dashboard import build_dashboard_tab
 from chatbot import open_chatbot_dialog
@@ -243,6 +244,55 @@ with tab_gantt:
                 f"{sum(calcul_jh_tache(t, st.session_state.config['jours_par_semaine']) for t in taches_crit)} j/h "
                 f"· {int(sum(calcul_cout_tache(t, equipe_index, st.session_state.config['jours_par_semaine']) for t in taches_crit)):,} €"
             )
+
+    with st.expander("📅 Comparatif des Plannings (Initial vs Réel)"):
+        st.markdown("Visualisation de l'impact des retards sur le calendrier du projet selon l'étape de contrôle choisie.")
+        
+        etape_gantt = st.radio(
+            "Étape de contrôle pour le comparatif :",
+            options=list(ETAPES.keys()),
+            format_func=lambda x: ETAPES[x]["nom"],
+            horizontal=True,
+            key="etape_gantt_selector"
+        )
+        
+        etape_data = ETAPES[etape_gantt]
+        sem_actuelle = etape_data["semaine_fin"]
+        
+        # Simulation des tâches avec retard pour le Gantt réel
+        taches_simulees = copy.deepcopy(st.session_state.taches)
+        for t in taches_simulees:
+            fin_tache = t["semaine"] + t["duree"] - 1
+            if fin_tache <= ETAPES["Etape 1"]["semaine_fin"]: etape_fin_tache = 1
+            elif fin_tache <= ETAPES["Etape 2"]["semaine_fin"]: etape_fin_tache = 2
+            else: etape_fin_tache = 3
+            
+            if sem_actuelle <= ETAPES["Etape 1"]["semaine_fin"]: etape_vision = 1
+            elif sem_actuelle <= ETAPES["Etape 2"]["semaine_fin"]: etape_vision = 2
+            else: etape_vision = 3
+            
+            etape_effective = min(etape_fin_tache, etape_vision)
+            
+            if etape_effective == 1: t["decalage_jours"] = ETAPES["Etape 1"]["retard_jours"]
+            elif etape_effective == 2: t["decalage_jours"] = ETAPES["Etape 2"]["retard_jours"]
+            else: t["decalage_jours"] = ETAPES["Etape 3"]["retard_jours"]
+            
+        fig_gantt_initial = build_gantt_figure(st.session_state.taches, equipe_index, st.session_state.config["date_debut"], st.session_state.config["jours_par_semaine"], afficher_deps=True)
+        fig_gantt_reel = build_gantt_figure(taches_simulees, equipe_index, st.session_state.config["date_debut"], st.session_state.config["jours_par_semaine"], afficher_deps=True)
+        
+        # Calage des échelles
+        min_date = min(semaine_vers_date(t["semaine"], st.session_state.config["date_debut"]) for t in st.session_state.taches) - timedelta(days=7)
+        max_date = max(semaine_vers_date(t["semaine"] + t["duree"], st.session_state.config["date_debut"]) + timedelta(days=t.get("decalage_jours", 0)) for t in taches_simulees) + timedelta(days=14)
+        
+        cg1, cg2 = st.columns(2)
+        with cg1:
+            st.markdown("#### Baseline (Initial)")
+            fig_gantt_initial.update_layout(height=400, margin=dict(l=0, r=0, t=30, b=0), xaxis=dict(range=[min_date, max_date]))
+            st.plotly_chart(fig_gantt_initial, use_container_width=True, key="gantt_initial_comp")
+        with cg2:
+            st.markdown("#### Réel (Projeté)")
+            fig_gantt_reel.update_layout(height=400, margin=dict(l=0, r=0, t=30, b=0), xaxis=dict(range=[min_date, max_date]))
+            st.plotly_chart(fig_gantt_reel, use_container_width=True, key="gantt_reel_comp")
 
     with st.expander("📈 Charge hebdomadaire"):
         st.plotly_chart(

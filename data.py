@@ -231,6 +231,62 @@ def get_equipe_default() -> list[dict]:
 
 
 # ─────────────────────────────────────────────────────────────
+# JALONS ET ÉTAPES DE CONTRÔLE (SIMULATION)
+# ─────────────────────────────────────────────────────────────
+
+ETAPES = {
+    "Etape 1": {
+        "nom": "Étape 1 — Kick-off (Semaine 5)",
+        "semaine_fin": 5,
+        "pct_avancement_simule": 0.18, 
+        "retard_jours": 3,
+        "couts_non_planifies": 4000,
+        "details_risques": [
+            {"risque": "Librairie OCR plus complexe que prévu", "impact_fin": 4000, "impact_tps": "0", "domaine": "Tech"},
+            {"risque": "Refonte du flux d'onboarding Invité", "impact_fin": 0, "impact_tps": "+3 j", "domaine": "UX"}
+        ],
+        "meteo": {
+            "PM": "☀️", "TL": "🌤️", "BE": "🌤️", "MOB": "☀️", "UX": "🌧️", 
+            "STG": "☀️", "ALT": "⛈️", "FRL": "☀️"
+        }
+    },
+    "Etape 2": {
+        "nom": "Étape 2 — Mi-parcours (Semaine 10)",
+        "semaine_fin": 10,
+        "pct_avancement_simule": 0.40, 
+        "retard_jours": 9,
+        "couts_non_planifies": 15000, 
+        "details_risques": [
+            {"risque": "Lenteurs géolocalisation spatiale", "impact_fin": 6000, "impact_tps": "0", "domaine": "Tech"},
+            {"risque": "Ajout des souhaits en urgence", "impact_fin": 5000, "impact_tps": "0", "domaine": "MOA"},
+            {"risque": "Absence Alternant (partiels)", "impact_fin": 0, "impact_tps": "+6 j", "domaine": "RH"},
+            {"risque": "Librairie OCR (Héritage étape 1)", "impact_fin": 4000, "impact_tps": "+0", "domaine": "Tech"}
+        ],
+        "meteo": {
+            "PM": "🌤️", "TL": "⛈️", "BE": "🌧️", "MOB": "🌤️", "UX": "☀️", 
+            "STG": "🌤️", "ALT": "⛈️", "FRL": "☀️"
+        }
+    },
+    "Etape 3": {
+        "nom": "Étape 3 — Livraison (Semaine 18)",
+        "semaine_fin": 18,
+        "pct_avancement_simule": 0.85, 
+        "retard_jours": 16,
+        "couts_non_planifies": 30500, 
+        "details_risques": [
+            {"risque": "Blocage KYC Stripe P2P", "impact_fin": 8000, "impact_tps": "0", "domaine": "Paiement"},
+            {"risque": "Refus Apple Store", "impact_fin": 2500, "impact_tps": "+7 j", "domaine": "Store"},
+            {"risque": "Desynchro WebSocket", "impact_fin": 5000, "impact_tps": "0", "domaine": "MOA"},
+            {"risque": "Héritage (Risques précédents)", "impact_fin": 15000, "impact_tps": "0", "domaine": "Projet"}
+        ],
+        "meteo": {
+            "PM": "🌧️", "TL": "⛈️", "BE": "⛈️", "MOB": "🌧️", "UX": "☀️", 
+            "STG": "🌤️", "ALT": "☀️", "FRL": "🌧️"
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────
 # CONSTANTES DE PRÉSENTATION
 # ─────────────────────────────────────────────────────────────
 
@@ -263,5 +319,5 @@ __all__ = [
     "EQUIPE", "EQUIPE_INDEX", "TACHES_DEFAULT",
     "get_taches_default", "get_equipe_default", "calcul_taux_jour",
     "CATEGORIES", "CAT_COULEURS", "COMPLEXITE_OPTIONS",
-    "COMPLEXITE_COULEURS", "TYPE_RESSOURCE_OPTIONS",
+    "COMPLEXITE_COULEURS", "TYPE_RESSOURCE_OPTIONS", "ETAPES",
 ]
