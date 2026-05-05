@@ -339,7 +339,7 @@ def build_gantt_figure(taches: list[dict], equipe_index: dict,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="sans-serif", size=12),
-        hoverlabel=dict(bgcolor="white", font_size=12, bordercolor="#ccc"),
+        hoverlabel=dict(bgcolor="white", font_size=12, bordercolor="#ccc", font_color="black"),
     )
     return fig
 
