@@ -142,6 +142,7 @@ filtre_actif = bool(filtre_cat or filtre_res or filtre_critique
 # ── BOUTON FLOTTANT ASSISTANT IA (bas droite) ─────────────────
 st.markdown("""
 <style>
+.ai-trigger-hide { visibility: hidden; height: 0; overflow: hidden; position: absolute; }
 #ai-fab-container {
     position: fixed;
     bottom: 28px;
@@ -168,15 +169,14 @@ st.markdown("""
 <div id="ai-fab-container">
   <button onclick="
     var btns = window.parent.document.querySelectorAll('button');
-    for(var i=0;i<btns.length;i++){if(btns[i].innerText.includes('Assistant IA')){btns[i].click();break;}}
+    for(var i=0;i<btns.length;i++){if(btns[i].innerText.trim()==='_AITRIGGER_'){btns[i].click();break;}}
   ">🤖 Assistant IA</button>
 </div>
 """, unsafe_allow_html=True)
 
-# Bouton Streamlit invisible qui déclenche le dialog (trigé via JS ci-dessus)
-if st.button("🤖 Ouvrir l'Assistant IA", key="open_ai_btn",
-             help="Ouvrir l'Assistant IA", type="primary",
-             label_visibility="collapsed"):
+# Bouton Streamlit masqué (trigger via JS du bouton FAB flottant)
+st.markdown('<div class="ai-trigger-hide">', unsafe_allow_html=True)
+if st.button("_AITRIGGER_", key="open_ai_btn"):
     total_rh_ai = kpis_total["total_cout"]
     total_sat_ai = sum(s["montant"] for s in st.session_state.couts_satellites)
     provision_ai = (total_rh_ai + total_sat_ai) * st.session_state.provision_risque_pct
@@ -191,6 +191,7 @@ if st.button("🤖 Ouvrir l'Assistant IA", key="open_ai_btn",
         equipe_index=equipe_index,
         taches=st.session_state.taches
     )
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ── EN-TÊTE ───────────────────────────────────────────────────
 st.markdown(f"# 📋 {st.session_state.config['nom']}")
