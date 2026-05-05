@@ -13,44 +13,44 @@ ETAPES = {
     "Etape 1": {
         "nom": "Étape 1 — Kick-off (Semaine 5)",
         "semaine_fin": 5,
-        "pct_avancement_simule": 0.35, # 35% d'avancement
-        "retard_jours": 2,
-        "couts_non_planifies": 3500, # Retard Freelance
+        "pct_avancement_simule": 0.35,
+        "retard_jours": 3,
+        "couts_non_planifies": 4000,
         "details_risques": [
-            "🔴 **RH** : Freelance UX indisponible 1 sem. (+ 3 500 €)",
-            "🟡 **Tech** : Migration auth plus longue que prévu (+ 2 jours)"
+            "🔴 **Tech** : Librairie OCR pour le scan des livres plus complexe que prévu (+ 4 000 €)",
+            "🟡 **UX** : Refonte du flux d'onboarding Invité (+ 3 jours)"
         ],
         "meteo": {
             "PM": "☀️", "TL": "🌤️", "BE": "🌤️", "MOB": "☀️", "UX": "🌧️", 
-            "QA": "☀️", "STG": "☀️", "ALT": "☀️", "FRL": "⛈️"
+            "QA": "☀️", "STG": "☀️", "ALT": "⛈️", "FRL": "☀️"
         }
     },
     "Etape 2": {
-        "nom": "Étape 2 — Mi-parcours (Semaine 9)",
-        "semaine_fin": 9,
-        "pct_avancement_simule": 0.65, # 65% d'avancement
-        "retard_jours": 8,
-        "couts_non_planifies": 16500, # 3500 + 8000 + 5000
+        "nom": "Étape 2 — Mi-parcours (Semaine 10)",
+        "semaine_fin": 10,
+        "pct_avancement_simule": 0.65,
+        "retard_jours": 9,
+        "couts_non_planifies": 15000, # 4000 + 6000 + 5000
         "details_risques": [
-            "🔴 **MOA** : Demande changement spec panier (+ 8 000 €)",
-            "🔴 **Tech** : Bug critique Stripe (+ 5 000 €)",
-            "🟡 **RH** : Stagiaire arrêt maladie 2 sem. (+ 6 jours retard)"
+            "🔴 **Tech** : Lenteurs sur les requêtes de géolocalisation spatiale (+ 6 000 €)",
+            "🔴 **MOA** : Demande d'ajouter la gestion des souhaits en urgence (+ 5 000 €)",
+            "🟡 **RH** : Alternant absent pour partiels 2 sem. (+ 6 jours retard)"
         ],
         "meteo": {
             "PM": "🌤️", "TL": "⛈️", "BE": "🌧️", "MOB": "🌤️", "UX": "☀️", 
-            "QA": "🌧️", "STG": "⛈️", "ALT": "🌤️", "FRL": "☀️"
+            "QA": "🌧️", "STG": "🌤️", "ALT": "⛈️", "FRL": "☀️"
         }
     },
     "Etape 3": {
-        "nom": "Étape 3 — Livraison (Semaine 14)",
-        "semaine_fin": 14,
-        "pct_avancement_simule": 0.95, # 95% d'avancement (reste des bugs)
-        "retard_jours": 15,
-        "couts_non_planifies": 36000, # 16500 + 12000 + 1500 + 6000
+        "nom": "Étape 3 — Livraison (Semaine 18)",
+        "semaine_fin": 18,
+        "pct_avancement_simule": 0.95,
+        "retard_jours": 16,
+        "couts_non_planifies": 30500, # 15000 + 8000 + 2500 + 5000
         "details_risques": [
-            "🔴 **Sécu** : Audit sécurité échoué (+ 12 000 €)",
-            "🟡 **Store** : Refus Apple Store (+ 1 500 €, + 1 sem.)",
-            "🔴 **MOA** : Recette MOA non conforme (+ 6 000 €)"
+            "🔴 **Paiement** : Blocage KYC Stripe sur les transactions P2P (+ 8 000 €)",
+            "🟡 **Store** : Refus Apple Store (débat In-App vs Stripe) (+ 2 500 €, + 1 sem.)",
+            "🔴 **MOA** : Desynchro WebSocket pendant la remise en main propre (+ 5 000 €)"
         ],
         "meteo": {
             "PM": "🌧️", "TL": "⛈️", "BE": "⛈️", "MOB": "🌧️", "UX": "☀️", 

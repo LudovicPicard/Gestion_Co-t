@@ -1,5 +1,5 @@
 """
-Application Streamlit — Pilotage RH par les coûts : Amazon Beta Mobile.
+Application Streamlit — Pilotage RH par les coûts : Book One.
 """
 
 import copy
@@ -22,7 +22,7 @@ from calculs import (
 from dashboard import build_dashboard_tab
 
 st.set_page_config(
-    page_title="Pilotage RH — Amazon Beta Mobile",
+    page_title="Pilotage RH — Book One",
     page_icon="📋",
     layout="wide",
     initial_sidebar_state="expanded",

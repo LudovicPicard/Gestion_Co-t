@@ -14,10 +14,10 @@ from copy import deepcopy
 # ─────────────────────────────────────────────────────────────
 
 PROJECT_CONFIG = {
-    "nom": "Amazon Beta Mobile",
-    "date_debut": "2025-09-01",   # format ISO, parseé par datetime
-    "jours_par_semaine": 5,        # jours ouvrés par semaine
-    "description": "Beta de l'application mobile Amazon — périmètre : recherche produit, panier, paiement, livraison.",
+    "nom": "Book One (MVP)",
+    "date_debut": "2025-01-01",
+    "jours_par_semaine": 5,
+    "description": "MVP Book One — Tous les livres à 1 €. Scan, Géoloc, Achat, P2P.",
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -119,44 +119,53 @@ def calcul_taux_jour(membre: dict) -> int:
 # ─────────────────────────────────────────────────────────────
 
 TACHES_DEFAULT = [
-    # ── Architecture ───────────────────────────────────────
-    {"id":  1, "cat": "Architecture",    "nom": "Définition architecture technique",     "res": "TL",  "semaine": 1,  "duree": 3, "critique": True,  "deps": [],       "complexite": "Haute"},
-    {"id":  2, "cat": "Architecture",    "nom": "Setup repo & CI/CD pipeline",           "res": "TL",  "semaine": 1,  "duree": 2, "critique": False, "deps": [],       "complexite": "Moyenne"},
-    {"id":  3, "cat": "Architecture",    "nom": "Spécifications fonctionnelles",         "res": "STG", "semaine": 1,  "duree": 4, "critique": False, "deps": [],       "complexite": "Faible"},
-    # ── Authentification ───────────────────────────────────
-    {"id":  4, "cat": "Authentification","nom": "Maquettes UX login / register",         "res": "FRL", "semaine": 4,  "duree": 3, "critique": True,  "deps": [3],      "complexite": "Moyenne"},
-    {"id":  5, "cat": "Authentification","nom": "API Auth (register, login, JWT)",       "res": "BE",  "semaine": 4,  "duree": 4, "critique": True,  "deps": [1],      "complexite": "Haute"},
-    {"id":  6, "cat": "Authentification","nom": "Intégration OAuth (Google, Apple)",    "res": "BE",  "semaine": 6,  "duree": 3, "critique": False, "deps": [5],      "complexite": "Moyenne"},
-    # ── Catalogue produits ─────────────────────────────────
-    {"id":  7, "cat": "Catalogue",       "nom": "Modèle de données produits",            "res": "BE",  "semaine": 4,  "duree": 2, "critique": True,  "deps": [1],      "complexite": "Haute"},
-    {"id":  8, "cat": "Catalogue",       "nom": "API recherche produits + filtres",      "res": "BE",  "semaine": 6,  "duree": 4, "critique": True,  "deps": [7],      "complexite": "Haute"},
-    {"id":  9, "cat": "Catalogue",       "nom": "Écran liste produits (mobile)",         "res": "MOB", "semaine": 7,  "duree": 3, "critique": True,  "deps": [4, 8],   "complexite": "Moyenne"},
-    {"id": 10, "cat": "Catalogue",       "nom": "Écran fiche produit détail",            "res": "MOB", "semaine": 8,  "duree": 3, "critique": True,  "deps": [9],      "complexite": "Moyenne"},
-    {"id": 11, "cat": "Catalogue",       "nom": "Moteur de recommandations simplifié",   "res": "ALT", "semaine": 9,  "duree": 4, "critique": False, "deps": [8],      "complexite": "Haute"},
-    # ── Panier / Commande ──────────────────────────────────
-    {"id": 12, "cat": "Panier",          "nom": "API panier (CRUD)",                     "res": "BE",  "semaine": 8,  "duree": 3, "critique": True,  "deps": [5, 7],   "complexite": "Moyenne"},
-    {"id": 13, "cat": "Panier",          "nom": "Écran panier & récap commande",         "res": "MOB", "semaine": 10, "duree": 3, "critique": True,  "deps": [10, 12], "complexite": "Moyenne"},
-    {"id": 14, "cat": "Panier",          "nom": "Gestion des promotions / codes promo",  "res": "BE",  "semaine": 9,  "duree": 3, "critique": False, "deps": [12],     "complexite": "Faible"},
-    # ── Paiement ───────────────────────────────────────────
-    {"id": 15, "cat": "Paiement",        "nom": "Intégration Stripe / paiement carte",   "res": "FRL", "semaine": 10, "duree": 4, "critique": True,  "deps": [12],     "complexite": "Haute"},
-    {"id": 16, "cat": "Paiement",        "nom": "Écran récap & confirmation paiement",   "res": "MOB", "semaine": 12, "duree": 2, "critique": True,  "deps": [13, 15], "complexite": "Moyenne"},
-    {"id": 17, "cat": "Paiement",        "nom": "Audit sécurité flux paiement",          "res": "FRL", "semaine": 13, "duree": 2, "critique": True,  "deps": [15],     "complexite": "Haute"},
-    # ── Livraison ──────────────────────────────────────────
-    {"id": 18, "cat": "Livraison",       "nom": "API suivi livraison (carrier mock)",    "res": "BE",  "semaine": 10, "duree": 3, "critique": False, "deps": [12],     "complexite": "Moyenne"},
-    {"id": 19, "cat": "Livraison",       "nom": "Écran suivi commande / livraison",      "res": "MOB", "semaine": 12, "duree": 2, "critique": False, "deps": [13, 18], "complexite": "Moyenne"},
-    # ── Profil utilisateur ─────────────────────────────────
-    {"id": 20, "cat": "Profil",          "nom": "API profil utilisateur (CRUD)",         "res": "BE",  "semaine": 6,  "duree": 2, "critique": False, "deps": [5],      "complexite": "Moyenne"},
-    {"id": 21, "cat": "Profil",          "nom": "Écran profil, adresses, historique",    "res": "MOB", "semaine": 8,  "duree": 3, "critique": False, "deps": [4, 20],  "complexite": "Moyenne"},
-    # ── QA / Tests ─────────────────────────────────────────
-    {"id": 22, "cat": "QA",             "nom": "Tests unitaires back-end",              "res": "ALT", "semaine": 8,  "duree": 5, "critique": False, "deps": [5, 8, 12],"complexite": "Moyenne"},
-    {"id": 23, "cat": "QA",             "nom": "Tests intégration & E2E",              "res": "QA",  "semaine": 11, "duree": 3, "critique": True,  "deps": [13, 16], "complexite": "Haute"},
-    # ── DevOps / Infra ─────────────────────────────────────
-    {"id": 24, "cat": "DevOps",          "nom": "Config environnements staging/prod",    "res": "TL",  "semaine": 6,  "duree": 2, "critique": False, "deps": [2],      "complexite": "Moyenne"},
-    {"id": 25, "cat": "DevOps",          "nom": "Monitoring & alertes",                 "res": "STG", "semaine": 8,  "duree": 3, "critique": False, "deps": [24],     "complexite": "Faible"},
-    # ── Lancement beta ─────────────────────────────────────
-    {"id": 26, "cat": "Lancement",       "nom": "Beta testing interne & correction bugs","res": "QA",  "semaine": 13, "duree": 2, "critique": True,  "deps": [23, 17], "complexite": "Haute"},
-    {"id": 27, "cat": "Lancement",       "nom": "Documentation technique",              "res": "STG", "semaine": 10, "duree": 4, "critique": False, "deps": [8, 12],  "complexite": "Faible"},
-    {"id": 28, "cat": "Lancement",       "nom": "Préparation store (screenshots, copy)","res": "UX",  "semaine": 12, "duree": 2, "critique": False, "deps": [4],      "complexite": "Faible"},
+    # ── M1 — Cadrage & Architecture ──────────────────────────
+    {"id":  1, "cat": "Cadrage & Architecture", "nom": "Specs fonctionnelles & backlog", "res": "PM",  "semaine": 1, "duree": 2, "critique": True,  "deps": [], "complexite": "Moyenne"},
+    {"id":  2, "cat": "Cadrage & Architecture", "nom": "Architecture technique",         "res": "TL",  "semaine": 1, "duree": 2, "critique": True,  "deps": [], "complexite": "Haute"},
+    {"id":  3, "cat": "Cadrage & Architecture", "nom": "Setup repo & CI/CD",             "res": "STG", "semaine": 3, "duree": 1, "critique": False, "deps": [2], "complexite": "Moyenne"},
+    {"id":  4, "cat": "Cadrage & Architecture", "nom": "Config cloud",                   "res": "TL",  "semaine": 3, "duree": 1, "critique": False, "deps": [2], "complexite": "Moyenne"},
+    
+    # ── M2 — UX/UI & Maquettage ──────────────────────────────
+    {"id":  5, "cat": "UX/UI & Maquettage", "nom": "Maquettes Auth & Catalogue",     "res": "UX",  "semaine": 2, "duree": 2, "critique": True,  "deps": [1], "complexite": "Moyenne"},
+    {"id":  6, "cat": "UX/UI & Maquettage", "nom": "Maquettes Scan & Dépôt",         "res": "UX",  "semaine": 4, "duree": 2, "critique": False, "deps": [5], "complexite": "Moyenne"},
+    {"id":  7, "cat": "UX/UI & Maquettage", "nom": "Maquettes Messagerie & Notifs",  "res": "UX",  "semaine": 6, "duree": 2, "critique": False, "deps": [6], "complexite": "Moyenne"},
+    
+    # ── M3 — Authentification & Compte ───────────────────────
+    {"id":  8, "cat": "Authentification & Compte", "nom": "API Auth (register, login, JWT)", "res": "BE",  "semaine": 4, "duree": 2, "critique": True,  "deps": [2], "complexite": "Moyenne"},
+    {"id":  9, "cat": "Authentification & Compte", "nom": "Mode invité catalogue",           "res": "MOB", "semaine": 4, "duree": 2, "critique": False, "deps": [5], "complexite": "Faible"},
+    {"id": 19, "cat": "Authentification & Compte", "nom": "Écran Auth mobile",               "res": "MOB", "semaine": 6, "duree": 2, "critique": True,  "deps": [5, 8], "complexite": "Moyenne"},
+    
+    # ── M4 — Catalogue & Géolocalisation ─────────────────────
+    {"id": 10, "cat": "Catalogue & Géolocalisation", "nom": "Modèle données livres",         "res": "BE",  "semaine": 4, "duree": 2, "critique": True,  "deps": [2], "complexite": "Moyenne"},
+    {"id": 11, "cat": "Catalogue & Géolocalisation", "nom": "API catalogue + géoloc",        "res": "BE",  "semaine": 6, "duree": 3, "critique": True,  "deps": [10], "complexite": "Haute"},
+    {"id": 13, "cat": "Catalogue & Géolocalisation", "nom": "API favoris (CRUD)",            "res": "STG", "semaine": 6, "duree": 2, "critique": False, "deps": [8], "complexite": "Faible"},
+    {"id": 20, "cat": "Catalogue & Géolocalisation", "nom": "Écran catalogue mobile",        "res": "MOB", "semaine": 9, "duree": 3, "critique": True,  "deps": [11], "complexite": "Haute"},
+    {"id": 22, "cat": "Catalogue & Géolocalisation", "nom": "Écran favoris mobile",          "res": "FRL", "semaine": 8, "duree": 2, "critique": False, "deps": [13], "complexite": "Moyenne"},
+    
+    # ── M5 — Scan & Dépôt de livres ──────────────────────────
+    {"id": 12, "cat": "Scan & Dépôt de livres", "nom": "API scan ISBN + dépôt", "res": "ALT", "semaine": 6, "duree": 2, "critique": True,  "deps": [10], "complexite": "Haute"},
+    {"id": 21, "cat": "Scan & Dépôt de livres", "nom": "Écran scan mobile",     "res": "MOB", "semaine": 8, "duree": 3, "critique": True,  "deps": [6, 12], "complexite": "Haute"},
+    
+    # ── M6 — Paiement & Transaction ──────────────────────────
+    {"id": 15, "cat": "Paiement & Transaction", "nom": "API paiement Stripe (1€)",          "res": "FRL", "semaine": 8,  "duree": 3, "critique": True,  "deps": [8], "complexite": "Haute"},
+    {"id": 16, "cat": "Paiement & Transaction", "nom": "API confirmation remise",           "res": "ALT", "semaine": 11, "duree": 2, "critique": True,  "deps": [15], "complexite": "Moyenne"},
+    {"id": 24, "cat": "Paiement & Transaction", "nom": "Écran paiement mobile",             "res": "MOB", "semaine": 13, "duree": 2, "critique": True,  "deps": [15, 16], "complexite": "Moyenne"},
+    
+    # ── M7 — Messagerie & RDV ────────────────────────────────
+    {"id": 14, "cat": "Messagerie & RDV", "nom": "API messagerie acheteur/vendeur", "res": "BE",  "semaine": 9,  "duree": 3, "critique": False, "deps": [8], "complexite": "Haute"},
+    {"id": 23, "cat": "Messagerie & RDV", "nom": "Écran messagerie mobile",         "res": "MOB", "semaine": 11, "duree": 3, "critique": False, "deps": [7, 14], "complexite": "Moyenne"},
+    
+    # ── M8 — Notifications & Souhaits ────────────────────────
+    {"id": 17, "cat": "Notifications & Souhaits", "nom": "API notifications push", "res": "BE",  "semaine": 11, "duree": 2, "critique": False, "deps": [10], "complexite": "Moyenne"},
+    {"id": 18, "cat": "Notifications & Souhaits", "nom": "API souhaits livres",    "res": "STG", "semaine": 8,  "duree": 2, "critique": False, "deps": [10], "complexite": "Faible"},
+    {"id": 25, "cat": "Notifications & Souhaits", "nom": "Écran souhaits & notifs","res": "MOB", "semaine": 13, "duree": 2, "critique": False, "deps": [17, 18], "complexite": "Moyenne"},
+    
+    # ── M9 — Tests & QA ──────────────────────────────────────
+    {"id": 26, "cat": "Tests & QA", "nom": "Tests unitaires & intégration", "res": "ALT", "semaine": 14, "duree": 3, "critique": False, "deps": [11, 14, 15], "complexite": "Moyenne"},
+    {"id": 27, "cat": "Tests & QA", "nom": "Beta testing & bugs",           "res": "QA",  "semaine": 16, "duree": 3, "critique": True,  "deps": [24, 25, 26], "complexite": "Haute"},
+    
+    # ── M10 — Déploiement ────────────────────────────────────
+    {"id": 28, "cat": "Déploiement", "nom": "Déploiement iOS & Android", "res": "PM", "semaine": 19, "duree": 2, "critique": True, "deps": [27], "complexite": "Moyenne"},
 ]
 
 
@@ -178,22 +187,22 @@ def get_equipe_default() -> list[dict]:
 # ─────────────────────────────────────────────────────────────
 
 CATEGORIES = [
-    "Architecture", "Authentification", "Catalogue",
-    "Panier", "Paiement", "Livraison", "Profil",
-    "QA", "DevOps", "Lancement",
+    "Cadrage & Architecture", "UX/UI & Maquettage", "Authentification & Compte",
+    "Catalogue & Géolocalisation", "Scan & Dépôt de livres", "Paiement & Transaction",
+    "Messagerie & RDV", "Notifications & Souhaits", "Tests & QA", "Déploiement"
 ]
 
 CAT_COULEURS = {
-    "Architecture":    "#534AB7",
-    "Authentification":"#185FA5",
-    "Catalogue":       "#0F6E56",
-    "Panier":          "#BA7517",
-    "Paiement":        "#D4537E",
-    "Livraison":       "#378ADD",
-    "Profil":          "#1D9E75",
-    "QA":              "#E24B4A",
-    "DevOps":          "#5F5E5A",
-    "Lancement":       "#993C1D",
+    "Cadrage & Architecture":    "#534AB7",
+    "UX/UI & Maquettage":        "#BA7517",
+    "Authentification & Compte": "#185FA5",
+    "Catalogue & Géolocalisation":"#378ADD",
+    "Scan & Dépôt de livres":    "#D4537E",
+    "Paiement & Transaction":    "#0F6E56",
+    "Messagerie & RDV":          "#1D9E75",
+    "Notifications & Souhaits":  "#E24B4A",
+    "Tests & QA":                "#888780",
+    "Déploiement":               "#5F5E5A",
 }
 
 COMPLEXITE_OPTIONS = ["Faible", "Moyenne", "Haute"]
