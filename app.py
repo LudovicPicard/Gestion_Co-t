@@ -139,44 +139,41 @@ kpis_total = calcul_kpis(
 filtre_actif = bool(filtre_cat or filtre_res or filtre_critique
                     or filtre_sem != (1, sem_max_projet))
 
-# ── BOUTON FLOTTANT ASSISTANT IA (bas droite) ─────────────────
+# ── BOUTON FLOTTANT ASSISTANT IA (bas droite) ─────────────────────
+# Le lien HTML modifie ?open_chat=1 → Streamlit rerun → dialog s'ouvre
 st.markdown("""
 <style>
-.ai-trigger-hide { visibility: hidden; height: 0; overflow: hidden; position: absolute; }
 #ai-fab-container {
     position: fixed;
     bottom: 28px;
     right: 28px;
     z-index: 9999;
 }
-#ai-fab-container button {
+#ai-fab-container a {
+    display: inline-block;
     background: linear-gradient(135deg, #5B6EF7 0%, #9B5CF6 100%);
-    color: white;
-    border: none;
+    color: white !important;
+    text-decoration: none;
     border-radius: 50px;
     padding: 14px 22px;
     font-size: 15px;
     font-weight: 600;
-    cursor: pointer;
     box-shadow: 0 4px 20px rgba(91,110,247,0.5);
     transition: all 0.25s;
 }
-#ai-fab-container button:hover {
+#ai-fab-container a:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 28px rgba(91,110,247,0.65);
 }
 </style>
 <div id="ai-fab-container">
-  <button onclick="
-    var btns = window.parent.document.querySelectorAll('button');
-    for(var i=0;i<btns.length;i++){if(btns[i].innerText.trim()==='_AITRIGGER_'){btns[i].click();break;}}
-  ">🤖 Assistant IA</button>
+  <a href="?open_chat=1">🤖 Assistant IA</a>
 </div>
 """, unsafe_allow_html=True)
 
-# Bouton Streamlit masqué (trigger via JS du bouton FAB flottant)
-st.markdown('<div class="ai-trigger-hide">', unsafe_allow_html=True)
-if st.button("_AITRIGGER_", key="open_ai_btn"):
+# Détection du paramètre URL → ouverture du dialog
+if st.query_params.get("open_chat") == "1":
+    st.query_params.clear()
     total_rh_ai = kpis_total["total_cout"]
     total_sat_ai = sum(s["montant"] for s in st.session_state.couts_satellites)
     provision_ai = (total_rh_ai + total_sat_ai) * st.session_state.provision_risque_pct
@@ -191,7 +188,6 @@ if st.button("_AITRIGGER_", key="open_ai_btn"):
         equipe_index=equipe_index,
         taches=st.session_state.taches
     )
-st.markdown('</div>', unsafe_allow_html=True)
 
 # ── EN-TÊTE ───────────────────────────────────────────────────
 st.markdown(f"# 📋 {st.session_state.config['nom']}")

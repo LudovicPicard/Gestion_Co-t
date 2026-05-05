@@ -1,24 +1,20 @@
 import streamlit as st
 import requests
 import json
-from datetime import datetime
 
 MISTRAL_API_KEY = "fhlDd6kR7RGDZ9HcUiOngJQAETxm1Tln"
 MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"
+# Modèle rapide pour des réponses quasi-instantanées
+MISTRAL_MODEL = "mistral-small-latest"
 
 def get_system_prompt(kpis, budget_global, total_rh, total_sat, provision, config, equipe_index, taches):
     """Génère le prompt système en injectant le contexte réel du projet."""
-    
-    # Résumé de l'équipe
     equipe_str = "\n".join([f"- {m['label']} ({m['type']}) : {m.get('salaire_brut_annuel', 0)}€ brut/an" for m in equipe_index.values()])
-    
-    # Résumé des satellites
     sat_str = "\n".join([f"- {s['nom']} ({s['categorie']}) : {s['montant']}€" for s in st.session_state.couts_satellites])
-    
     date_livraison = kpis['date_fin'].strftime('%d/%m/%Y') if kpis.get('nb_taches') else 'Non définie'
-    
-    prompt = f"""Tu es l'Assistant IA de pilotage de projet pour le projet "{config['nom']}".
-Ton rôle est d'analyser les données financières, RH et de planning du projet pour répondre aux questions du directeur de projet ou des parties prenantes.
+
+    return f"""Tu es l'Assistant IA de pilotage de projet pour le projet "{config['nom']}".
+Ton rôle est d'analyser les données financières, RH et de planning pour répondre aux questions du chef de projet.
 Tu as accès en temps réel aux données suivantes :
 
 ### RÉSUMÉ FINANCIER GLOBAL
@@ -40,70 +36,76 @@ Tu as accès en temps réel aux données suivantes :
 {equipe_str}
 
 ### CONSIGNES
-1. Sois professionnel, concis, précis et analytique.
-2. Si on te pose une question sur les chiffres, base-toi UNIQUEMENT sur les données ci-dessus.
+1. Réponds en français, de façon concise et analytique (max 5 phrases).
+2. Base-toi UNIQUEMENT sur les données ci-dessus pour les chiffres.
 3. Agis comme un expert PMO / Contrôleur de Gestion.
-4. N'invente jamais de coûts ou de ressources qui ne sont pas listés.
+4. N'invente pas de coûts ou de ressources absentes.
 """
-    return prompt
 
-def call_mistral_api(messages_history):
-    """Appel à l'API Mistral avec l'historique de la conversation"""
+def stream_mistral(messages_history):
+    """Appel streamé vers l'API Mistral — yield chunk par chunk."""
     headers = {
         "Authorization": f"Bearer {MISTRAL_API_KEY}",
         "Content-Type": "application/json",
-        "Accept": "application/json"
     }
-    
     data = {
-        "model": "mistral-large-latest",
+        "model": MISTRAL_MODEL,
         "messages": messages_history,
-        "temperature": 0.2
+        "temperature": 0.2,
+        "stream": True,
     }
-    
     try:
-        response = requests.post(MISTRAL_API_URL, headers=headers, json=data)
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
+        with requests.post(MISTRAL_API_URL, headers=headers, json=data, stream=True, timeout=30) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                line = line.decode("utf-8")
+                if line.startswith("data: "):
+                    payload = line[6:]
+                    if payload.strip() == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(payload)
+                        delta = chunk["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            yield delta
+                    except json.JSONDecodeError:
+                        continue
     except Exception as e:
-        return f"Désolé, une erreur de communication avec l'API Mistral est survenue : {str(e)}"
+        yield f"\n\n⚠️ Erreur API Mistral : {str(e)}"
 
-@st.dialog("🤖 Assistant IA - Copilote de Projet", width="large")
+@st.dialog("🤖 Assistant IA — Copilote de Projet", width="large")
 def open_chatbot_dialog(kpis, budget_global, total_rh, total_sat, provision, config, equipe_index, taches):
-    st.markdown("Posez n'importe quelle question sur le budget, le planning ou l'équipe de ce projet. L'IA a accès en temps réel à l'intégralité du contexte.")
-    
-    # Initialisation de l'historique dans la session
+    st.caption("Posez n'importe quelle question sur le budget, le planning ou l'équipe. L'IA connaît le contexte complet du projet en temps réel.")
+
+    # Initialisation de l'historique
     if "messages" not in st.session_state:
         st.session_state.messages = []
-        
-    # Génération du prompt système dynamique caché
-    system_prompt = get_system_prompt(kpis, budget_global, total_rh, total_sat, provision, config, equipe_index, taches)
-    
-    # Affichage de l'historique des messages (en excluant le système)
-    for message in st.session_state.messages:
-        if message["role"] != "system":
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
 
-    # Champ de saisie utilisateur
-    if prompt := st.chat_input("Que souhaitez-vous savoir sur le projet ? (ex: Pourquoi la provision est-elle si haute ?)"):
-        
-        # Affichage du message utilisateur
+    system_prompt = get_system_prompt(kpis, budget_global, total_rh, total_sat, provision, config, equipe_index, taches)
+
+    # Affichage de l'historique
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # Bouton pour effacer l'historique
+    if st.session_state.messages:
+        if st.button("🗑️ Effacer la conversation", key="clear_chat"):
+            st.session_state.messages = []
+            st.rerun()
+
+    # Saisie utilisateur
+    if prompt := st.chat_input("Posez votre question sur le projet…"):
         with st.chat_message("user"):
             st.markdown(prompt)
-            
-        # Ajout du message utilisateur à l'historique
         st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # Préparation des messages pour l'API (Injection du contexte système caché)
+
         api_messages = [{"role": "system", "content": system_prompt}] + st.session_state.messages
-        
-        # Appel à l'API Mistral
+
+        # Streaming de la réponse
         with st.chat_message("assistant"):
-            with st.spinner("Analyse du projet en cours..."):
-                response = call_mistral_api(api_messages)
-                st.markdown(response)
-        
-        # Ajout de la réponse à l'historique
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            full_response = st.write_stream(stream_mistral(api_messages))
+
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
