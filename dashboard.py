@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet, build_gantt_figure
+from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet, build_gantt_figure, semaine_vers_date
 from data import COUTS_SATELLITES, PROVISION_RISQUE_PCT
 
 # ─────────────────────────────────────────────────────────────
@@ -320,14 +320,18 @@ def build_dashboard_tab(taches, equipe_index, config):
     fig_gantt_initial = build_gantt_figure(taches, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
     fig_gantt_reel = build_gantt_figure(taches_simulees, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
     
+    # On force la même échelle de temps (x-axis) sur les deux graphiques pour voir visuellement le décalage
+    min_date = min(semaine_vers_date(t["semaine"], config["date_debut"]) for t in taches) - timedelta(days=7)
+    max_date = max(semaine_vers_date(t["semaine"] + t["duree"], config["date_debut"]) + timedelta(days=t.get("decalage_jours", 0)) for t in taches_simulees) + timedelta(days=14)
+    
     col_gantt1, col_gantt2 = st.columns(2)
     
     with col_gantt1:
         st.markdown("#### Planning Initial (Baseline)")
-        fig_gantt_initial.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0))
+        fig_gantt_initial.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0), xaxis=dict(range=[min_date, max_date]))
         st.plotly_chart(fig_gantt_initial, use_container_width=True)
         
     with col_gantt2:
         st.markdown("#### Planning Réel (Projeté avec Décalages)")
-        fig_gantt_reel.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0))
+        fig_gantt_reel.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0), xaxis=dict(range=[min_date, max_date]))
         st.plotly_chart(fig_gantt_reel, use_container_width=True)
