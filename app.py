@@ -51,6 +51,10 @@ if "equipe" not in st.session_state:
     st.session_state.equipe = get_equipe_default()
 if "config" not in st.session_state:
     st.session_state.config = copy.deepcopy(PROJECT_CONFIG)
+if "couts_satellites" not in st.session_state:
+    st.session_state.couts_satellites = copy.deepcopy(COUTS_SATELLITES)
+if "provision_risque_pct" not in st.session_state:
+    st.session_state.provision_risque_pct = PROVISION_RISQUE_PCT
 
 equipe_index      = {m["id"]: m for m in st.session_state.equipe}
 ids_ressources    = [m["id"] for m in st.session_state.equipe]
@@ -69,6 +73,9 @@ with st.sidebar:
     st.session_state.config["jours_par_semaine"] = st.slider(
         "Jours ouvrés par semaine", min_value=3, max_value=5,
         value=st.session_state.config["jours_par_semaine"])
+    st.session_state.provision_risque_pct = st.slider(
+        "Provision Risques (%)", min_value=0, max_value=50,
+        value=int(st.session_state.provision_risque_pct * 100)) / 100.0
 
     st.divider()
     st.markdown("### 🔍 Filtres & affichage Gantt")
@@ -101,6 +108,8 @@ with st.sidebar:
         st.session_state.taches = get_taches_default()
         st.session_state.equipe = get_equipe_default()
         st.session_state.config = copy.deepcopy(PROJECT_CONFIG)
+        st.session_state.couts_satellites = copy.deepcopy(COUTS_SATELLITES)
+        st.session_state.provision_risque_pct = PROVISION_RISQUE_PCT
         st.rerun()
 
 # ── FILTRAGE ─────────────────────────────────────────────────
@@ -148,8 +157,12 @@ c2.metric("Jours / Homme", f"{kpis['total_jh']} j/h",
           f"/{kpis_total['total_jh']} total" if filtre_actif else None)
 c3.metric("Durée", f"{kpis['nb_semaines']} semaines")
 c4.metric("Date de livraison", kpis["date_fin"].strftime("%d/%m/%Y") if kpis["nb_taches"] else "—")
-c5.metric("Budget RH", f"{int(kpis['total_cout']):,} €".replace(",", " "),
-          f"/{int(kpis_total['total_cout']):,} total".replace(",", " ") if filtre_actif else None)
+total_satellites = sum(s["montant"] for s in st.session_state.couts_satellites)
+budget_global_filtre = kpis["total_cout"] + total_satellites + (kpis["total_cout"] + total_satellites) * st.session_state.provision_risque_pct
+budget_global_total = kpis_total["total_cout"] + total_satellites + (kpis_total["total_cout"] + total_satellites) * st.session_state.provision_risque_pct
+
+c5.metric("Budget Global", f"{int(budget_global_filtre):,} €".replace(",", " "),
+          f"/{int(budget_global_total):,} total".replace(",", " ") if filtre_actif else None)
 
 st.divider()
 
@@ -283,15 +296,15 @@ with tab_budget:
     st.markdown("Vision exhaustive des coûts de production : RH, Satellites (infrastructure, juridique...) et Risques.")
     
     total_rh  = kpis_total["total_cout"]
-    total_sat = sum(s["montant"] for s in COUTS_SATELLITES)
-    provision = (total_rh + total_sat) * PROVISION_RISQUE_PCT
+    total_sat = sum(s["montant"] for s in st.session_state.couts_satellites)
+    provision = (total_rh + total_sat) * st.session_state.provision_risque_pct
     budget_global = total_rh + total_sat + provision
     
     b1, b2, b3, b4 = st.columns(4)
     b1.metric("Budget Global", f"{int(budget_global):,} €".replace(",", " "))
-    b2.metric("Part RH", f"{int(total_rh):,} €".replace(",", " "), f"{total_rh/budget_global*100:.0f}%")
-    b3.metric("Coûts Satellites", f"{int(total_sat):,} €".replace(",", " "), f"{total_sat/budget_global*100:.0f}%")
-    b4.metric("Provision Risques", f"{int(provision):,} €".replace(",", " "), f"{PROVISION_RISQUE_PCT*100:.0f}%")
+    b2.metric("Part RH", f"{int(total_rh):,} €".replace(",", " "), f"{total_rh/budget_global*100:.0f}%" if budget_global else "")
+    b3.metric("Coûts Satellites", f"{int(total_sat):,} €".replace(",", " "), f"{total_sat/budget_global*100:.0f}%" if budget_global else "")
+    b4.metric("Provision Risques", f"{int(provision):,} €".replace(",", " "), f"{st.session_state.provision_risque_pct*100:.0f}%")
 
     st.divider()
     
@@ -311,10 +324,34 @@ with tab_budget:
         
     with col_sat:
         st.markdown("#### Détail des Coûts Satellites")
-        df_sat = pd.DataFrame(COUTS_SATELLITES)[["nom", "categorie", "montant"]]
-        df_sat.columns = ["Nom", "Catégorie", "Montant (€)"]
-        st.dataframe(df_sat.style.format({"Montant (€)": "{:,}"}), use_container_width=True, hide_index=True)
-        st.caption("Frais fixes, abonnements et dépenses annexes indispensables au projet.")
+        st.caption("Modifiez directement dans le tableau ou ajoutez/supprimez des lignes.")
+        
+        df_sat_edit = pd.DataFrame(st.session_state.couts_satellites)
+        # Rename columns for nicer display but we need to map back
+        df_sat_edit = df_sat_edit.rename(columns={"id": "ID", "nom": "Nom", "categorie": "Catégorie", "montant": "Montant (€)"})
+        
+        edited_df = st.data_editor(
+            df_sat_edit,
+            num_rows="dynamic",
+            use_container_width=True,
+            hide_index=True,
+            key="editor_satellites"
+        )
+        
+        # Save back to session_state
+        new_satellites = []
+        for _, row in edited_df.iterrows():
+            if pd.notna(row.get("Nom")) and pd.notna(row.get("Montant (€)")):
+                new_satellites.append({
+                    "id": str(row.get("ID", "")),
+                    "nom": str(row.get("Nom", "")),
+                    "categorie": str(row.get("Catégorie", "")),
+                    "montant": float(row.get("Montant (€)", 0))
+                })
+        
+        if st.button("💾 Sauvegarder Coûts Satellites"):
+            st.session_state.couts_satellites = new_satellites
+            st.rerun()
         
     st.divider()
     
@@ -322,7 +359,7 @@ with tab_budget:
     fig_phasage = build_phasage_mensuel_chart(
         st.session_state.taches, equipe_index,
         st.session_state.config["date_debut"], st.session_state.config["jours_par_semaine"],
-        COUTS_SATELLITES
+        st.session_state.couts_satellites
     )
     st.plotly_chart(fig_phasage, use_container_width=True, key="phasage_budget")
     
@@ -477,4 +514,4 @@ with tab_equipe:
 # DASHBOARD
 # ════════════════════════════════════════════════════════════
 with tab_dashboard:
-    build_dashboard_tab(st.session_state.taches, equipe_index, st.session_state.config)
+    build_dashboard_tab(taches_filtrees, equipe_index, st.session_state.config)

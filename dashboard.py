@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet, build_gantt_figure, semaine_vers_date, build_phasage_mensuel_chart
-from data import COUTS_SATELLITES, PROVISION_RISQUE_PCT
 
 # ─────────────────────────────────────────────────────────────
 # DONNÉES SIMULÉES PAR ÉTAPE (JALONS)
@@ -112,8 +111,8 @@ def build_dashboard_tab(taches, equipe_index, config):
     ev_rh = bac_rh * etape_data["pct_avancement_simule"]
     
     # Satellites & Provisions
-    total_sat = sum(s["montant"] for s in COUTS_SATELLITES)
-    provision_risques = (bac_rh + total_sat) * PROVISION_RISQUE_PCT
+    total_sat = sum(s["montant"] for s in st.session_state.couts_satellites)
+    provision_risques = (bac_rh + total_sat) * st.session_state.provision_risque_pct
     
     # BAC Global (Budget Total Prévu)
     bac_global = bac_rh + total_sat + provision_risques
@@ -310,7 +309,7 @@ def build_dashboard_tab(taches, equipe_index, config):
     fig_phasage = build_phasage_mensuel_chart(
         taches, equipe_index,
         config["date_debut"], config["jours_par_semaine"],
-        COUTS_SATELLITES
+        st.session_state.couts_satellites
     )
     st.plotly_chart(fig_phasage, use_container_width=True, key="phasage_dashboard")
 
