@@ -313,9 +313,34 @@ def build_dashboard_tab(taches, equipe_index, config):
     # Simulation des tâches avec retard pour le Gantt réel
     taches_simulees = copy.deepcopy(taches)
     for t in taches_simulees:
-        # Si la tâche n'est pas encore terminée à la semaine actuelle, elle subit le retard accumulé
-        if t["semaine"] + t["duree"] - 1 >= sem_actuelle:
-            t["decalage_jours"] = etape_data["retard_jours"]
+        fin_tache = t["semaine"] + t["duree"] - 1
+        
+        # Déterminer dans quelle étape la tâche se termine théoriquement
+        if fin_tache <= ETAPES["Etape 1"]["semaine_fin"]:
+            etape_fin_tache = 1
+        elif fin_tache <= ETAPES["Etape 2"]["semaine_fin"]:
+            etape_fin_tache = 2
+        else:
+            etape_fin_tache = 3
+            
+        # Déterminer l'étape courante que l'utilisateur est en train de visionner
+        if sem_actuelle <= ETAPES["Etape 1"]["semaine_fin"]:
+            etape_vision = 1
+        elif sem_actuelle <= ETAPES["Etape 2"]["semaine_fin"]:
+            etape_vision = 2
+        else:
+            etape_vision = 3
+            
+        # Le retard de la tâche est figé à l'étape où elle s'est terminée,
+        # dans la limite de l'étape actuellement visionnée (pour les tâches futures)
+        etape_effective = min(etape_fin_tache, etape_vision)
+        
+        if etape_effective == 1:
+            t["decalage_jours"] = ETAPES["Etape 1"]["retard_jours"]
+        elif etape_effective == 2:
+            t["decalage_jours"] = ETAPES["Etape 2"]["retard_jours"]
+        else:
+            t["decalage_jours"] = ETAPES["Etape 3"]["retard_jours"]
             
     fig_gantt_initial = build_gantt_figure(taches, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
     fig_gantt_reel = build_gantt_figure(taches_simulees, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
