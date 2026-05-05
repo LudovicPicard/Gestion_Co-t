@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet, build_gantt_figure, semaine_vers_date
+from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet, build_gantt_figure, semaine_vers_date, build_phasage_mensuel_chart
 from data import COUTS_SATELLITES, PROVISION_RISQUE_PCT
 
 # ─────────────────────────────────────────────────────────────
@@ -306,6 +306,15 @@ def build_dashboard_tab(taches, equipe_index, config):
 
     st.divider()
     
+    st.markdown("### 📅 Phasage Mensuel du Budget")
+    fig_phasage = build_phasage_mensuel_chart(
+        taches, equipe_index,
+        config["date_debut"], config["jours_par_semaine"],
+        COUTS_SATELLITES
+    )
+    st.plotly_chart(fig_phasage, use_container_width=True)
+
+    st.divider()
     # ── 4. GANTT COMPARATIF ──────────────────────────────────────────
     st.markdown("### 📅 Comparatif des Plannings (Gantt)")
     st.markdown("Visualisation de l'impact des retards sur le calendrier du projet.")
