@@ -104,25 +104,6 @@ with st.sidebar:
         format="S%d",
     )
 
-    st.divider()
-    if st.button("💬 Ouvrir l'Assistant IA", use_container_width=True, type="primary"):
-        # Calculer les variables globales pour le contexte IA
-        total_rh_ai = kpis_total["total_cout"]
-        total_sat_ai = sum(s["montant"] for s in st.session_state.couts_satellites)
-        provision_ai = (total_rh_ai + total_sat_ai) * st.session_state.provision_risque_pct
-        budget_global_ai = total_rh_ai + total_sat_ai + provision_ai
-        
-        open_chatbot_dialog(
-            kpis=kpis_total,
-            budget_global=budget_global_ai,
-            total_rh=total_rh_ai,
-            total_sat=total_sat_ai,
-            provision=provision_ai,
-            config=st.session_state.config,
-            equipe_index=equipe_index,
-            taches=st.session_state.taches
-        )
-
     if st.button("🔄 Réinitialiser toutes les données", use_container_width=True):
         st.session_state.taches = get_taches_default()
         st.session_state.equipe = get_equipe_default()
@@ -157,6 +138,59 @@ kpis_total = calcul_kpis(
 )
 filtre_actif = bool(filtre_cat or filtre_res or filtre_critique
                     or filtre_sem != (1, sem_max_projet))
+
+# ── BOUTON FLOTTANT ASSISTANT IA (bas droite) ─────────────────
+st.markdown("""
+<style>
+#ai-fab-container {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+}
+#ai-fab-container button {
+    background: linear-gradient(135deg, #5B6EF7 0%, #9B5CF6 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(91,110,247,0.5);
+    transition: all 0.25s;
+}
+#ai-fab-container button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(91,110,247,0.65);
+}
+</style>
+<div id="ai-fab-container">
+  <button onclick="
+    var btns = window.parent.document.querySelectorAll('button');
+    for(var i=0;i<btns.length;i++){if(btns[i].innerText.includes('Assistant IA')){btns[i].click();break;}}
+  ">🤖 Assistant IA</button>
+</div>
+""", unsafe_allow_html=True)
+
+# Bouton Streamlit invisible qui déclenche le dialog (trigé via JS ci-dessus)
+if st.button("🤖 Ouvrir l'Assistant IA", key="open_ai_btn",
+             help="Ouvrir l'Assistant IA", type="primary",
+             label_visibility="collapsed"):
+    total_rh_ai = kpis_total["total_cout"]
+    total_sat_ai = sum(s["montant"] for s in st.session_state.couts_satellites)
+    provision_ai = (total_rh_ai + total_sat_ai) * st.session_state.provision_risque_pct
+    budget_global_ai = total_rh_ai + total_sat_ai + provision_ai
+    open_chatbot_dialog(
+        kpis=kpis_total,
+        budget_global=budget_global_ai,
+        total_rh=total_rh_ai,
+        total_sat=total_sat_ai,
+        provision=provision_ai,
+        config=st.session_state.config,
+        equipe_index=equipe_index,
+        taches=st.session_state.taches
+    )
 
 # ── EN-TÊTE ───────────────────────────────────────────────────
 st.markdown(f"# 📋 {st.session_state.config['nom']}")
