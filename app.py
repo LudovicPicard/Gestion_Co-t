@@ -21,6 +21,7 @@ from calculs import (
     calcul_cout_tache, calcul_jh_tache, build_phasage_mensuel_chart
 )
 from dashboard import build_dashboard_tab
+from chatbot import build_chatbot_tab
 
 st.set_page_config(
     page_title="Pilotage RH — Book One",
@@ -166,8 +167,8 @@ c5.metric("Budget Global", f"{int(budget_global_filtre):,} €".replace(",", " "
 
 st.divider()
 
-tab_gantt, tab_taches, tab_budget, tab_equipe, tab_dashboard = st.tabs([
-    "📊 Gantt", "📝 Tâches", "💰 Budget", "👥 Équipe", "📈 Dashboard"
+tab_gantt, tab_taches, tab_budget, tab_equipe, tab_dashboard, tab_chatbot = st.tabs([
+    "📊 Gantt", "📝 Tâches", "💰 Budget", "👥 Équipe", "📈 Dashboard", "🤖 Assistant IA"
 ])
 
 # ════════════════════════════════════════════════════════════
@@ -515,3 +516,24 @@ with tab_equipe:
 # ════════════════════════════════════════════════════════════
 with tab_dashboard:
     build_dashboard_tab(taches_filtrees, equipe_index, st.session_state.config)
+
+# ════════════════════════════════════════════════════════════
+# CHATBOT (ASSISTANT IA)
+# ════════════════════════════════════════════════════════════
+with tab_chatbot:
+    # On calcule les variables globales qui serviront de contexte à l'IA
+    total_rh_ai = kpis_total["total_cout"]
+    total_sat_ai = sum(s["montant"] for s in st.session_state.couts_satellites)
+    provision_ai = (total_rh_ai + total_sat_ai) * st.session_state.provision_risque_pct
+    budget_global_ai = total_rh_ai + total_sat_ai + provision_ai
+    
+    build_chatbot_tab(
+        kpis=kpis_total,
+        budget_global=budget_global_ai,
+        total_rh=total_rh_ai,
+        total_sat=total_sat_ai,
+        provision=provision_ai,
+        config=st.session_state.config,
+        equipe_index=equipe_index,
+        taches=st.session_state.taches
+    )
