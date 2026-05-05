@@ -113,12 +113,15 @@ def build_mindmap_tab():
   <meta charset="UTF-8" />
   <style>
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    html, body {{ width: 100%; height: 100vh; background: #0f172a; }}
-    #mindmap {{ width: 100%; height: 100vh; }}
-    .markmap-foreign {{ display: flex; align-items: center; justify-content: center; }}
-    /* Scrollbar dark */
-    ::-webkit-scrollbar {{ width: 6px; height: 6px; background: #1e293b; }}
-    ::-webkit-scrollbar-thumb {{ background: #475569; border-radius: 3px; }}
+    html, body {{ width: 100%; height: 100vh; background: #ffffff; }}
+    #mindmap {{ width: 100%; height: 100vh; background: #ffffff; }}
+    /* Texte des nœuds en noir */
+    .markmap-foreign div {{
+      color: #1a1a2e !important;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+    }}
   </style>
 </head>
 <body>
@@ -131,18 +134,16 @@ def build_mindmap_tab():
     (async () => {{
       const {{ Markmap, loadCSS, loadJS }} = window.markmap;
       const {{ Transformer }} = window.markmap;
-      
+
       const transformer = new Transformer();
-      
       const markdown = {repr(MINDMAP_MARKDOWN)};
-      
       const {{ root, features }} = transformer.transform(markdown);
       const {{ styles, scripts }} = transformer.getUsedAssets(features);
-      
+
       if (styles) loadCSS(styles);
       if (scripts) await loadJS(scripts, {{ getMarkmap: () => window.markmap }});
-      
-      const mm = Markmap.create('#mindmap', {{
+
+      Markmap.create('#mindmap', {{
         autoFit: true,
         fitRatio: 0.95,
         duration: 400,
@@ -152,17 +153,13 @@ def build_mindmap_tab():
         paddingX: 12,
         color: (node) => {{
           const palette = [
-            '#818CF8', '#34D399', '#FB923C', '#F472B6',
-            '#38BDF8', '#A78BFA', '#FBBF24', '#6EE7B7',
-            '#F87171', '#4ADE80'
+            '#4F46E5', '#059669', '#D97706', '#DB2777',
+            '#0891B2', '#7C3AED', '#B45309', '#065F46',
+            '#9D174D', '#1D4ED8'
           ];
           return palette[node.depth % palette.length];
         }},
       }}, root);
-      
-      // Dark background for SVG
-      const svg = document.getElementById('mindmap');
-      svg.style.background = '#0f172a';
     }})();
   </script>
 </body>
