@@ -69,8 +69,8 @@ def call_mistral_api(messages_history):
     except Exception as e:
         return f"Désolé, une erreur de communication avec l'API Mistral est survenue : {str(e)}"
 
-def build_chatbot_tab(kpis, budget_global, total_rh, total_sat, provision, config, equipe_index, taches):
-    st.markdown("### 🤖 Assistant IA - Copilote de Projet")
+@st.dialog("🤖 Assistant IA - Copilote de Projet", width="large")
+def open_chatbot_dialog(kpis, budget_global, total_rh, total_sat, provision, config, equipe_index, taches):
     st.markdown("Posez n'importe quelle question sur le budget, le planning ou l'équipe de ce projet. L'IA a accès en temps réel à l'intégralité du contexte.")
     
     # Initialisation de l'historique dans la session
