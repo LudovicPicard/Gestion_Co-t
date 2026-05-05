@@ -310,6 +310,42 @@ with tab_taches:
     st.markdown("### Gestion des tâches")
     st.caption("Modifiez une tâche : Gantt, budget et KPIs se mettent à jour automatiquement.")
 
+    # ── TABLEAU RÉCAPITULATIF DES COÛTS PAR TÂCHE ──────────────────
+    st.markdown("#### 💰 Récapitulatif Budgétaire des Tâches")
+    
+    data_taches = []
+    for t in st.session_state.taches:
+        res_label = equipe_index.get(t["res"], {}).get("label", t["res"])
+        jh = calcul_jh_tache(t, st.session_state.config["jours_par_semaine"])
+        cout = calcul_cout_tache(t, equipe_index, st.session_state.config["jours_par_semaine"])
+        data_taches.append({
+            "ID": t["id"],
+            "Catégorie": t["cat"],
+            "Nom": t["nom"],
+            "Ressource": res_label,
+            "Sem.": t["semaine"],
+            "Durée (S)": t["duree"],
+            "Charge (J/H)": jh,
+            "Coût (€)": int(cout),
+            "Critique": "🔴" if t.get("critique") else ""
+        })
+    
+    df_taches_summary = pd.DataFrame(data_taches)
+    
+    st.dataframe(
+        df_taches_summary.sort_values("ID"),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "ID": st.column_config.NumberColumn(width="small"),
+            "Coût (€)": st.column_config.NumberColumn(format="%d €"),
+            "Critique": st.column_config.TextColumn(width="small"),
+            "Sem.": st.column_config.NumberColumn(width="small"),
+            "Durée (S)": st.column_config.NumberColumn(width="small"),
+        }
+    )
+    st.divider()
+
     with st.expander("➕ Ajouter une tâche"):
         nc1, nc2, nc3 = st.columns(3)
         new_nom  = nc1.text_input("Nom de la tâche", key="new_nom")
