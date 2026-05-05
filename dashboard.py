@@ -1,9 +1,11 @@
+import copy
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet
+from calculs import calcul_cout_tache, calcul_jh_tache, date_fin_projet, build_gantt_figure
+from data import COUTS_SATELLITES, PROVISION_RISQUE_PCT
 
 # ─────────────────────────────────────────────────────────────
 # DONNÉES SIMULÉES PAR ÉTAPE (JALONS)
@@ -13,12 +15,12 @@ ETAPES = {
     "Etape 1": {
         "nom": "Étape 1 — Kick-off (Semaine 5)",
         "semaine_fin": 5,
-        "pct_avancement_simule": 0.35,
+        "pct_avancement_simule": 0.18, 
         "retard_jours": 3,
         "couts_non_planifies": 4000,
         "details_risques": [
-            "🔴 **Tech** : Librairie OCR pour le scan des livres plus complexe que prévu (+ 4 000 €)",
-            "🟡 **UX** : Refonte du flux d'onboarding Invité (+ 3 jours)"
+            {"risque": "Librairie OCR plus complexe que prévu", "impact_fin": 4000, "impact_tps": "0", "domaine": "Tech"},
+            {"risque": "Refonte du flux d'onboarding Invité", "impact_fin": 0, "impact_tps": "+3 j", "domaine": "UX"}
         ],
         "meteo": {
             "PM": "☀️", "TL": "🌤️", "BE": "🌤️", "MOB": "☀️", "UX": "🌧️", 
@@ -28,13 +30,14 @@ ETAPES = {
     "Etape 2": {
         "nom": "Étape 2 — Mi-parcours (Semaine 10)",
         "semaine_fin": 10,
-        "pct_avancement_simule": 0.65,
+        "pct_avancement_simule": 0.40, 
         "retard_jours": 9,
-        "couts_non_planifies": 15000, # 4000 + 6000 + 5000
+        "couts_non_planifies": 15000, 
         "details_risques": [
-            "🔴 **Tech** : Lenteurs sur les requêtes de géolocalisation spatiale (+ 6 000 €)",
-            "🔴 **MOA** : Demande d'ajouter la gestion des souhaits en urgence (+ 5 000 €)",
-            "🟡 **RH** : Alternant absent pour partiels 2 sem. (+ 6 jours retard)"
+            {"risque": "Lenteurs géolocalisation spatiale", "impact_fin": 6000, "impact_tps": "0", "domaine": "Tech"},
+            {"risque": "Ajout des souhaits en urgence", "impact_fin": 5000, "impact_tps": "0", "domaine": "MOA"},
+            {"risque": "Absence Alternant (partiels)", "impact_fin": 0, "impact_tps": "+6 j", "domaine": "RH"},
+            {"risque": "Librairie OCR (Héritage étape 1)", "impact_fin": 4000, "impact_tps": "+0", "domaine": "Tech"}
         ],
         "meteo": {
             "PM": "🌤️", "TL": "⛈️", "BE": "🌧️", "MOB": "🌤️", "UX": "☀️", 
@@ -44,13 +47,14 @@ ETAPES = {
     "Etape 3": {
         "nom": "Étape 3 — Livraison (Semaine 18)",
         "semaine_fin": 18,
-        "pct_avancement_simule": 0.95,
+        "pct_avancement_simule": 0.85, 
         "retard_jours": 16,
-        "couts_non_planifies": 30500, # 15000 + 8000 + 2500 + 5000
+        "couts_non_planifies": 30500, 
         "details_risques": [
-            "🔴 **Paiement** : Blocage KYC Stripe sur les transactions P2P (+ 8 000 €)",
-            "🟡 **Store** : Refus Apple Store (débat In-App vs Stripe) (+ 2 500 €, + 1 sem.)",
-            "🔴 **MOA** : Desynchro WebSocket pendant la remise en main propre (+ 5 000 €)"
+            {"risque": "Blocage KYC Stripe P2P", "impact_fin": 8000, "impact_tps": "0", "domaine": "Paiement"},
+            {"risque": "Refus Apple Store", "impact_fin": 2500, "impact_tps": "+7 j", "domaine": "Store"},
+            {"risque": "Desynchro WebSocket", "impact_fin": 5000, "impact_tps": "0", "domaine": "MOA"},
+            {"risque": "Héritage (Risques précédents)", "impact_fin": 15000, "impact_tps": "0", "domaine": "Projet"}
         ],
         "meteo": {
             "PM": "🌧️", "TL": "⛈️", "BE": "⛈️", "MOB": "🌧️", "UX": "☀️", 
@@ -59,14 +63,20 @@ ETAPES = {
     }
 }
 
-def build_dashboard_tab(taches, equipe_index, config):
-    """
-    Rendu du 5ème onglet (Dashboard Opérationnel)
-    """
-    st.markdown("## 📈 Dashboard Opérationnel - Suivi Budgétaire")
-    st.markdown("Suivi des aléas, crises et KPIs clés à 3 étapes du projet.")
+def cout_tache_a_semaine(t, equipe_index, jours_par_semaine, semaine_cible):
+    if semaine_cible < t["semaine"]:
+        return 0
+    if semaine_cible >= t["semaine"] + t["duree"] - 1:
+        return calcul_cout_tache(t, equipe_index, jours_par_semaine)
     
-    # ── SÉLECTION DE L'ÉTAPE ───────────────────────────────────────
+    semaines_faites = semaine_cible - t["semaine"] + 1
+    pct = semaines_faites / t["duree"]
+    return calcul_cout_tache(t, equipe_index, jours_par_semaine) * pct
+
+def build_dashboard_tab(taches, equipe_index, config):
+    st.markdown("## 📈 Dashboard de Direction (Contrôle de Gestion)")
+    st.markdown("Suivi budgétaire du projet complet, analyse des dérives et comparatif de plannings.")
+    
     etape_selectionnee = st.radio(
         "Sélectionnez une étape de contrôle :",
         options=list(ETAPES.keys()),
@@ -79,180 +89,205 @@ def build_dashboard_tab(taches, equipe_index, config):
     
     st.divider()
     
-    # ── CALCUL DES DONNÉES DE BASE POUR L'ÉTAPE ─────────────────────
+    # ── RÉSUMÉ DU PROJET ───────────────────────────────────────────
+    st.markdown("### 📋 Résumé du Projet")
+    total_jh = sum(calcul_jh_tache(t, config["jours_par_semaine"]) for t in taches)
+    date_fin_prevue = date_fin_projet(taches, config["date_debut"])
     
-    # 1. Tâches prévues vs achevées jusqu'à cette semaine
-    taches_prevues_etape = [t for t in taches if t["semaine"] <= sem_actuelle]
-    taches_achevees_reelles = [t for t in taches if t["semaine"] + t["duree"] - 1 <= sem_actuelle]
+    col_res1, col_res2, col_res3, col_res4 = st.columns(4)
+    col_res1.metric("Date de Début", datetime.strptime(config["date_debut"], "%Y-%m-%d").strftime("%d/%m/%Y"))
+    col_res2.metric("Livraison Prévue", date_fin_prevue.strftime("%d/%m/%Y"))
+    col_res3.metric("Charge Totale (J/H)", f"{total_jh} jours")
+    col_res4.metric("Taille de l'équipe", f"{len(equipe_index)} personnes")
     
-    nb_prevues = len(taches_prevues_etape)
+    st.info("L'équipe IT est composée de profils spécifiques incluant notamment un **Stagiaire**, un **Alternant** et un **Freelance**. Les tâches (maquettage, API, mobile, test, déploiement) leur ont été affectées en fonction de leur expertise et sont centralisées dans le diagramme de Gantt.")
     
-    # On simule qu'à cause des retards, toutes les tâches prévues ne sont pas finies
-    # On utilise le pct_avancement_simule pour déterminer les tâches réellement achevées
-    nb_achevees_simule = int(len(taches) * etape_data["pct_avancement_simule"])
-    # On borne pour ne pas dépasser le nombre de tâches du projet
-    nb_achevees_simule = min(nb_achevees_simule, len(taches))
+    st.divider()
     
-    # 2. Coûts planifiés totaux
-    cout_planifie_total = sum(calcul_cout_tache(t, equipe_index, config["jours_par_semaine"]) for t in taches)
+    # ── 1. CALCULS GLOBAUX ──────────────────────────────────────────────
     
-    # Coût planifié à date (au prorata des tâches)
-    cout_planifie_date = sum(calcul_cout_tache(t, equipe_index, config["jours_par_semaine"]) for t in taches_prevues_etape)
+    # RH Initial
+    bac_rh = sum(calcul_cout_tache(t, equipe_index, config["jours_par_semaine"]) for t in taches)
+    pv_rh = sum(cout_tache_a_semaine(t, equipe_index, config["jours_par_semaine"], sem_actuelle) for t in taches)
+    ev_rh = bac_rh * etape_data["pct_avancement_simule"]
     
-    # 3. Coûts réels = Coût planifié des tâches achevées + coûts non planifiés (risques) + dérive
+    # Satellites & Provisions
+    total_sat = sum(s["montant"] for s in COUTS_SATELLITES)
+    provision_risques = (bac_rh + total_sat) * PROVISION_RISQUE_PCT
+    
+    # BAC Global (Budget Total Prévu)
+    bac_global = bac_rh + total_sat + provision_risques
+    
+    # Météo (Surcoûts RH dus à la baisse de productivité)
+    surcout_meteo_total = 0
+    donnees_meteo = []
+    
+    for rid, profil in equipe_index.items():
+        m = etape_data["meteo"].get(rid, "☀️")
+        f = 1.0
+        if m == "🌧️": f = 1.15
+        elif m == "⛈️": f = 1.30
+        
+        # Le surcoût s'applique sur le travail planifié à date de la ressource
+        taches_res = [t for t in taches if t["res"] == rid]
+        pv_res = sum(cout_tache_a_semaine(t, equipe_index, config["jours_par_semaine"], sem_actuelle) for t in taches_res)
+        
+        surcout_res = (pv_res * f) - pv_res
+        surcout_meteo_total += surcout_res
+        
+        donnees_meteo.append({
+            "Profil": profil["label"],
+            "Météo": m,
+            "Impact Productivité": "+15%" if m == "🌧️" else ("+30%" if m == "⛈️" else "Normal"),
+            "Surcoût Financier généré": f"+{int(surcout_res):,} €".replace(",", " ") if surcout_res > 0 else "-"
+        })
+        
+    facteur_moyen_rh = 1.0 + (surcout_meteo_total / pv_rh if pv_rh > 0 else 0)
+    
+    # Coûts non planifiés (Risques purs)
     couts_non_planifies = etape_data["couts_non_planifies"]
-    cout_reel_total = cout_planifie_total + couts_non_planifies # Projection
-    cout_reel_date = cout_planifie_date + couts_non_planifies
     
-    # ── 10 KPIs ─────────────────────────────────────────────────────
-    st.markdown("### 📊 Indicateurs de Performance (10 KPIs)")
+    # AC Global (Consommé) = EV_RH * météo + Satellites Dépensés + Risques purs
+    # On assume que les satellites sont lissés, donc (total_sat * % avancement)
+    ac_sat = total_sat * etape_data["pct_avancement_simule"]
+    ac_rh = (ev_rh * facteur_moyen_rh)
+    ac_global = ac_rh + ac_sat + couts_non_planifies
+    
+    # EAC Global (Projection Finale) = AC + Reste à Faire (simplifié)
+    # Reste à Faire RH
+    etc_rh = (bac_rh - ev_rh) * facteur_moyen_rh 
+    # Reste à Faire Satellites
+    etc_sat = total_sat - ac_sat
+    # La projection ignore la provision (elle est là pour l'absorber)
+    eac_global = ac_global + etc_rh + etc_sat
+    
+    # Indices
+    efficacite_cout = ((ev_rh + ac_sat) / ac_global) if ac_global > 0 else 1.0
+    efficacite_delai = ev_rh / pv_rh if pv_rh > 0 else 1.0
+    
+    # ── 2. SCORECARDS ────────────────────────────────────────────
+    st.markdown("### 🏦 Synthèse Financière du Projet")
     
     c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Budget Initial Réservé", f"{int(bac_global):,} €".replace(",", " "), "Dont provisions", help="Budget validé au lancement, incluant la provision pour risques.")
+    c2.metric("Consommé à date", f"{int(ac_global):,} €".replace(",", " "), f"Dépense réelle constatée", delta_color="off", help="Toutes les dépenses réelles à ce jour (RH + Satellites + Factures imprévues).")
+    c3.metric("Projection Finale", f"{int(eac_global):,} €".replace(",", " "), f"{(eac_global-bac_global)/bac_global*100:+.1f}% d'écart final", delta_color="inverse", help="Où on va atterrir à la fin du projet si le rythme continue.")
     
-    # KPI 1: % de tâches terminées
-    pct_acheve = (nb_achevees_simule / nb_prevues * 100) if nb_prevues > 0 else 0
-    c1.metric(
-        "1. % Tâches terminées / prévues", 
-        f"{pct_acheve:.1f}%",
-        f"{nb_achevees_simule} achevées sur {nb_prevues} prévues"
-    )
-    
-    # KPI 2: Jours d'avance / retard
-    retard = etape_data["retard_jours"]
-    c2.metric(
-        "2. Avance / Retard", 
-        f"{retard} jours",
-        "- Retard accumulé" if retard > 0 else "Avance",
-        delta_color="inverse"
-    )
-    
-    # KPI 3: Nombre de tâches achevées
-    c3.metric(
-        "3. Tâches achevées (Total)", 
-        f"{nb_achevees_simule}",
-        f"sur {len(taches)} au total au backlog"
-    )
-    
-    # KPI 8: Taux d'achèvement dans les délais
-    # On simule que plus on avance, plus les tâches sont en retard
-    pct_dans_delai = max(10, 100 - (retard * 4)) 
-    c4.metric(
-        "8. Tâches dans les délais", 
-        f"{pct_dans_delai:.1f}%",
-        "En baisse suite aux aléas" if retard > 0 else "Optimal"
-    )
+    # Reste de la provision
+    provision_restante = provision_risques - (eac_global - (bac_rh + total_sat))
+    is_prov_negative = provision_restante < 0
+    c4.metric("Provision Risques Restante", f"{int(provision_restante):,} €".replace(",", " "), "Déficit budgétaire" if is_prov_negative else "Marge de sécurité", delta_color="normal" if not is_prov_negative else "inverse")
     
     st.markdown("<br>", unsafe_allow_html=True)
     c5, c6, c7, c8 = st.columns(4)
     
-    # KPI 4: Coût réel du projet (Projection)
-    c5.metric(
-        "4. Coût réel projet (Projeté)", 
-        f"{int(cout_reel_total):,} €".replace(",", " "),
-        f"vs {int(cout_planifie_total):,} € (Initial)",
-        delta_color="inverse"
-    )
+    # Jauge Efficacité Coût (ex-CPI)
+    fig_cpi = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = efficacite_cout,
+        title = {'text': "Efficacité Budgétaire"},
+        gauge = {
+            'axis': {'range': [0, 1.5]},
+            'bar': {'color': "#1D9E75" if efficacite_cout >= 1 else "#E24B4A"},
+            'steps': [
+                {'range': [0, 1], 'color': "rgba(226, 75, 74, 0.2)"},
+                {'range': [1, 1.5], 'color': "rgba(29, 158, 117, 0.2)"}
+            ]
+        }
+    ))
+    fig_cpi.update_layout(height=200, margin=dict(l=10, r=10, t=30, b=10))
+    c5.plotly_chart(fig_cpi, use_container_width=True, help="Supérieur à 1 : Le projet coûte moins cher que prévu. Inférieur à 1 : Surcoûts constatés.")
     
-    # KPI 5: Coûts non planifiés
-    c6.metric(
-        "5. Coûts non planifiés", 
-        f"{int(couts_non_planifies):,} €".replace(",", " "),
-        "Risques matérialisés",
-        delta_color="inverse"
-    )
+    # Jauge Tenue des Délais (ex-SPI)
+    fig_spi = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = efficacite_delai,
+        title = {'text': "Tenue des Délais"},
+        gauge = {
+            'axis': {'range': [0, 1.5]},
+            'bar': {'color': "#1D9E75" if efficacite_delai >= 1 else "#E24B4A"},
+            'steps': [
+                {'range': [0, 1], 'color': "rgba(226, 75, 74, 0.2)"},
+                {'range': [1, 1.5], 'color': "rgba(29, 158, 117, 0.2)"}
+            ]
+        }
+    ))
+    fig_spi.update_layout(height=200, margin=dict(l=10, r=10, t=30, b=10))
+    c6.plotly_chart(fig_spi, use_container_width=True, help="Supérieur à 1 : Projet en avance. Inférieur à 1 : Retard constaté par rapport au planning initial.")
     
-    # KPI 6: Taux conso budget RH
-    taux_conso = (cout_reel_date / cout_planifie_total * 100) if cout_planifie_total > 0 else 0
-    c7.metric(
-        "6. Conso. budget RH à date", 
-        f"{taux_conso:.1f}%",
-        f"Objectif étape: {(cout_planifie_date/cout_planifie_total*100):.1f}%",
-        delta_color="inverse"
-    )
-    
-    # KPI 10: Coût moyen par tâche
-    cout_moyen = (cout_reel_total / len(taches)) if len(taches) > 0 else 0
-    c8.metric(
-        "10. Coût moyen / tâche", 
-        f"{int(cout_moyen):,} €".replace(",", " "),
-        f"Initial: {int(cout_planifie_total/len(taches)):,} €",
-        delta_color="inverse"
-    )
-    
+    c7.metric("Surcoût lié aux Aléas (Risques purs)", f"{int(couts_non_planifies):,} €".replace(",", " "), "Factures non prévues", delta_color="inverse")
+    c8.metric("Surcoût lié à l'équipe (Météo/Temps)", f"{int(surcout_meteo_total):,} €".replace(",", " "), "Baisse de productivité", delta_color="inverse")
+
     st.divider()
     
-    # ── RISQUES & MÉTÉO ─────────────────────────────────────────────
-    col_gauche, col_droite = st.columns([1, 1.2])
+    # ── 3. RISQUES ET EXPLICATION DU DÉFICIT ─────────────────────────────
+    st.markdown("### 🔍 Explication des Surcoûts : Matrice des Risques & Météo de l'Équipe")
     
-    with col_gauche:
-        st.markdown("### ⚠️ Nouveaux risques survenus")
-        for risque in etape_data["details_risques"]:
-            st.error(risque)
-            
-        # Graphique des coûts
-        labels = ['Planifié à date', 'Réel à date (avec aléas)']
-        values = [cout_planifie_date, cout_reel_date]
+    col_matrice, col_meteo = st.columns([1.2, 1])
+    
+    with col_matrice:
+        st.markdown("#### Matrice des Risques Survenus")
+        df_risques = pd.DataFrame(etape_data["details_risques"])
+        df_risques.columns = ["Description du Risque", "Impact Financier (€)", "Impact Planning (Jours)", "Domaine"]
+        st.dataframe(df_risques.style.format({"Impact Financier (€)": "{:,}"}), use_container_width=True, hide_index=True)
         
-        fig = go.Figure([go.Bar(
-            x=labels, 
-            y=values, 
-            marker_color=['#1D9E75', '#E24B4A'],
-            text=[f"{int(v):,} €".replace(',', ' ') for v in values],
-            textposition='auto'
-        )])
-        fig.update_layout(
-            title="Comparatif des Coûts à date",
-            yaxis_title="Euros (€)",
-            height=300,
-            margin=dict(l=20, r=20, t=40, b=20)
+        st.markdown(f"**Retard global du projet : <span style='color:#E24B4A'>{etape_data['retard_jours']} jours</span>**", unsafe_allow_html=True)
+        
+    with col_meteo:
+        st.markdown("#### Météo de l'Équipe (Productivité)")
+        df_meteo = pd.DataFrame(donnees_meteo)
+        st.dataframe(df_meteo, use_container_width=True, hide_index=True)
+        st.caption("Une baisse de productivité (Pluie, Orage) rallonge le temps de travail et génère un surcoût RH (TJM x Jours supplémentaires).")
+
+    st.divider()
+
+    col_gauche, col_droite = st.columns([1.2, 1])
+    with col_gauche:
+        st.markdown("### 📊 S-Curve : Évolution de la Valeur")
+        semaines = list(range(1, 20)) # Max 19 semaines
+        
+        pv_curve = []
+        for w in semaines:
+            pv_w = sum(cout_tache_a_semaine(t, equipe_index, config["jours_par_semaine"], w) for t in taches)
+            pv_curve.append(pv_w + (total_sat * (w/19))) # Lissage satellites
+            
+        ev_curve = [((ev_rh + ac_sat) * (w/sem_actuelle)) if w <= sem_actuelle else None for w in semaines]
+        ac_curve = [(ac_global * (w/sem_actuelle)) if w <= sem_actuelle else None for w in semaines]
+        
+        fig_s = go.Figure()
+        fig_s.add_trace(go.Scatter(x=semaines, y=pv_curve, mode='lines', name='Valeur Planifiée', line=dict(color='#534AB7', width=3)))
+        fig_s.add_trace(go.Scatter(x=semaines, y=ev_curve, mode='lines', name='Valeur Acquise', line=dict(color='#1D9E75', width=3)))
+        fig_s.add_trace(go.Scatter(x=semaines, y=ac_curve, mode='lines', name='Dépense Réelle (Consommé)', line=dict(color='#E24B4A', width=3, dash='dot')))
+        
+        fig_s.update_layout(
+            xaxis_title="Semaine",
+            yaxis_title="Budget cumulé (€)",
+            height=350,
+            margin=dict(l=20, r=20, t=10, b=20),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig_s, use_container_width=True)
 
     with col_droite:
-        st.markdown("### 👥 7 & 9. Météo et Coût par ressource")
-        st.caption("Le coût réel inclut une répartition des coûts non planifiés.")
+        st.markdown("### 📊 Composition de la Projection Finale")
         
-        # Préparation des données pour le tableau KPI 7 & 9
-        donnees_ressources = []
-        for rid, m in equipe_index.items():
-            # Coût planifié pour cette ressource
-            taches_res = [t for t in taches if t["res"] == rid]
-            cout_plan = sum(calcul_cout_tache(t, equipe_index, config["jours_par_semaine"]) for t in taches_res)
-            
-            # Simulation du coût réel (Planifié + part des risques si météo mauvaise)
-            meteo = etape_data["meteo"].get(rid, "☀️")
-            surcout_facteur = 1.0
-            if meteo == "🌧️": surcout_facteur = 1.15
-            elif meteo == "⛈️": surcout_facteur = 1.30
-            
-            cout_reel = cout_plan * surcout_facteur
-            
-            donnees_ressources.append({
-                "Profil": m.get("label", rid),
-                "9. Météo": meteo,
-                "Coût Planifié": f"{int(cout_plan):,} €".replace(",", " "),
-                "7. Coût Réel Estimé": f"{int(cout_reel):,} €".replace(",", " "),
-                "Dérive": f"+{int(cout_reel - cout_plan):,} €".replace(",", " ") if (cout_reel - cout_plan) > 0 else "-"
-            })
-            
-        df_meteo = pd.DataFrame(donnees_ressources)
-        st.dataframe(df_meteo, use_container_width=True, hide_index=True)
-
-    st.divider()
-    st.markdown("### 📊 Analyse Visuelle Avancée")
-    
-    col_graph1, col_graph2 = st.columns(2)
-    
-    with col_graph1:
-        # Cascade des coûts (Waterfall) pour le budget global
+        budget_initial_hors_prov = bac_rh + total_sat
+        
+        # Cascade des coûts (Waterfall)
         fig_waterfall = go.Figure(go.Waterfall(
             name="Budget",
             orientation="v",
-            measure=["absolute", "relative", "total"],
-            x=["Budget Initial", "Risques & Aléas", "Budget Projeté"],
+            measure=["absolute", "relative", "relative", "total", "absolute"],
+            x=["Budget (RH + Satellites)", "Surcoût Météo/Temps", "Aléas (Risques)", "Projection Finale", "Consommé à date"],
             textposition="outside",
-            text=[f"{int(cout_planifie_total):,} €", f"+{int(couts_non_planifies):,} €", f"{int(cout_reel_total):,} €"],
-            y=[cout_planifie_total, couts_non_planifies, cout_reel_total],
+            text=[
+                f"{int(budget_initial_hors_prov):,} €", 
+                f"+{int(eac_global - budget_initial_hors_prov - couts_non_planifies):,} €", 
+                f"+{int(couts_non_planifies):,} €", 
+                f"{int(eac_global):,} €",
+                f"{int(ac_global):,} €"
+            ],
+            y=[budget_initial_hors_prov, (eac_global - budget_initial_hors_prov - couts_non_planifies), couts_non_planifies, eac_global, ac_global],
             connector={"line":{"color":"rgb(63, 63, 63)"}},
             decreasing={"marker":{"color":"#1D9E75"}},
             increasing={"marker":{"color":"#E24B4A"}},
@@ -260,84 +295,37 @@ def build_dashboard_tab(taches, equipe_index, config):
         ))
         
         fig_waterfall.update_layout(
-            title="Composition du Budget Global",
             height=350,
-            margin=dict(l=20, r=20, t=40, b=20),
+            margin=dict(l=20, r=20, t=10, b=20),
             showlegend=False
         )
         st.plotly_chart(fig_waterfall, use_container_width=True)
-        
-    with col_graph2:
-        # Pie chart répartition des tâches
-        nb_retard = max(0, nb_prevues - nb_achevees_simule)
-        nb_a_venir = max(0, len(taches) - nb_achevees_simule - nb_retard)
-        
-        labels_tasks = ['Achevées', 'En Retard', 'À Venir']
-        values_tasks = [nb_achevees_simule, nb_retard, nb_a_venir]
-        colors_tasks = ['#1D9E75', '#E24B4A', '#E8EAF0']
-        
-        fig_pie = go.Figure(data=[go.Pie(
-            labels=labels_tasks, 
-            values=values_tasks, 
-            hole=.4,
-            marker=dict(colors=colors_tasks)
-        )])
-        
-        fig_pie.update_layout(
-            title="Avancement des Tâches",
-            height=350,
-            margin=dict(l=20, r=20, t=40, b=20)
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.caption("Le graphique montre comment les dérives (météo et aléas) gonflent le coût final par rapport à la base de départ.")
 
-    # ── GRAPHIQUE PAR RESSOURCE ──
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.divider()
     
-    noms_res = []
-    couts_plan_res = []
-    couts_reel_res = []
+    # ── 4. GANTT COMPARATIF ──────────────────────────────────────────
+    st.markdown("### 📅 Comparatif des Plannings (Gantt)")
+    st.markdown("Visualisation de l'impact des retards sur le calendrier du projet.")
     
-    for rid, m in equipe_index.items():
-        taches_res = [t for t in taches if t["res"] == rid]
-        c_plan = sum(calcul_cout_tache(t, equipe_index, config["jours_par_semaine"]) for t in taches_res)
-        
-        meteo = etape_data["meteo"].get(rid, "☀️")
-        facteur = 1.0
-        if meteo == "🌧️": facteur = 1.15
-        elif meteo == "⛈️": facteur = 1.30
-        c_reel = c_plan * facteur
-        
-        if c_plan > 0:
-            noms_res.append(m.get("label", rid))
-            couts_plan_res.append(c_plan)
-            couts_reel_res.append(c_reel)
+    # Simulation des tâches avec retard pour le Gantt réel
+    taches_simulees = copy.deepcopy(taches)
+    for t in taches_simulees:
+        # Si la tâche n'est pas encore terminée à la semaine actuelle, elle subit le retard accumulé
+        if t["semaine"] + t["duree"] - 1 >= sem_actuelle:
+            t["decalage_jours"] = etape_data["retard_jours"]
             
-    fig_bar = go.Figure()
-    fig_bar.add_trace(go.Bar(
-        y=noms_res,
-        x=couts_plan_res,
-        name='Coût Planifié',
-        orientation='h',
-        marker=dict(color='#1D9E75'),
-        text=[f"{int(v):,} €".replace(',', ' ') for v in couts_plan_res],
-        textposition='auto'
-    ))
-    fig_bar.add_trace(go.Bar(
-        y=noms_res,
-        x=couts_reel_res,
-        name='Coût Réel (Estimé)',
-        orientation='h',
-        marker=dict(color='#E24B4A'),
-        text=[f"{int(v):,} €".replace(',', ' ') for v in couts_reel_res],
-        textposition='auto'
-    ))
+    fig_gantt_initial = build_gantt_figure(taches, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
+    fig_gantt_reel = build_gantt_figure(taches_simulees, equipe_index, config["date_debut"], config["jours_par_semaine"], afficher_deps=True)
     
-    fig_bar.update_layout(
-        title="Répartition des coûts par membre de l'équipe (Planifié vs Réel)",
-        barmode='group',
-        height=400,
-        margin=dict(l=20, r=20, t=40, b=20),
-        xaxis_title="Coût en Euros (€)",
-        yaxis={'categoryorder':'total ascending'}
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
+    col_gantt1, col_gantt2 = st.columns(2)
+    
+    with col_gantt1:
+        st.markdown("#### Planning Initial (Baseline)")
+        fig_gantt_initial.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig_gantt_initial, use_container_width=True)
+        
+    with col_gantt2:
+        st.markdown("#### Planning Réel (Projeté avec Décalages)")
+        fig_gantt_reel.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig_gantt_reel, use_container_width=True)

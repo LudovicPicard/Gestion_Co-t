@@ -21,6 +21,20 @@ PROJECT_CONFIG = {
 }
 
 # ─────────────────────────────────────────────────────────────
+# COÛTS SATELLITES ET PROVISIONS (BUDGET GLOBAL)
+# ─────────────────────────────────────────────────────────────
+
+COUTS_SATELLITES = [
+    {"id": "SAT_1", "nom": "Infrastructure Cloud (AWS)", "montant": 4500, "categorie": "Tech"},
+    {"id": "SAT_2", "nom": "API OCR & Géolocalisation", "montant": 2000, "categorie": "Tech"},
+    {"id": "SAT_3", "nom": "Comptes Développeurs (Apple/Google)", "montant": 150, "categorie": "Admin"},
+    {"id": "SAT_4", "nom": "Campagne Marketing (Lancement)", "montant": 8000, "categorie": "Marketing"},
+    {"id": "SAT_5", "nom": "Frais Juridiques (CGU/Stripe)", "montant": 2500, "categorie": "Admin"},
+]
+
+PROVISION_RISQUE_PCT = 0.15 # 15% du budget total (RH + Satellites)
+
+# ─────────────────────────────────────────────────────────────
 # ÉQUIPE TECHNIQUE — 9 profils
 #
 # Champs :

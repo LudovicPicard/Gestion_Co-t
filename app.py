@@ -13,11 +13,12 @@ from data import (
     COMPLEXITE_OPTIONS, COMPLEXITE_COULEURS, TYPE_RESSOURCE_OPTIONS,
     JOURS_OUVRES_PAR_AN, STATUTS_CONVENTION, TAUX_CHARGES_PATRONALES,
     STATUT_DEFAULT_PAR_TYPE, calcul_taux_jour,
+    COUTS_SATELLITES, PROVISION_RISQUE_PCT
 )
 from calculs import (
     calcul_kpis, build_gantt_figure, build_budget_chart,
     build_cat_chart, build_charge_chart, build_budget_dataframe,
-    calcul_cout_tache, calcul_jh_tache,
+    calcul_cout_tache, calcul_jh_tache, build_phasage_mensuel_chart
 )
 from dashboard import build_dashboard_tab
 
@@ -278,44 +279,75 @@ with tab_taches:
 # BUDGET
 # ════════════════════════════════════════════════════════════
 with tab_budget:
-    st.markdown("### Décomposition du budget RH")
-    total_c  = kpis_total["total_cout"]
-    cout_cdi = sum(
-        calcul_cout_tache(t, equipe_index, st.session_state.config["jours_par_semaine"])
-        for t in st.session_state.taches
-        if equipe_index.get(t["res"], {}).get("type") == "CDI"
-    )
-    cout_ext = total_c - cout_cdi
+    st.markdown("### 🌍 Budget Global du Projet")
+    st.markdown("Vision exhaustive des coûts de production : RH, Satellites (infrastructure, juridique...) et Risques.")
+    
+    total_rh  = kpis_total["total_cout"]
+    total_sat = sum(s["montant"] for s in COUTS_SATELLITES)
+    provision = (total_rh + total_sat) * PROVISION_RISQUE_PCT
+    budget_global = total_rh + total_sat + provision
+    
     b1, b2, b3, b4 = st.columns(4)
-    b1.metric("Budget total", f"{int(total_c):,} €".replace(",", " "))
-    b2.metric("Part CDI", f"{int(cout_cdi):,} €".replace(",", " "),
-              f"{cout_cdi/total_c*100:.0f}%" if total_c else "")
-    b3.metric("Part externe", f"{int(cout_ext):,} €".replace(",", " "),
-              f"{cout_ext/total_c*100:.0f}%" if total_c else "")
-    b4.metric("Coût moyen/j/h",
-              f"{int(total_c/kpis_total['total_jh']):,} €".replace(",", " ") if kpis_total["total_jh"] else "—")
+    b1.metric("Budget Global", f"{int(budget_global):,} €".replace(",", " "))
+    b2.metric("Part RH", f"{int(total_rh):,} €".replace(",", " "), f"{total_rh/budget_global*100:.0f}%")
+    b3.metric("Coûts Satellites", f"{int(total_sat):,} €".replace(",", " "), f"{total_sat/budget_global*100:.0f}%")
+    b4.metric("Provision Risques", f"{int(provision):,} €".replace(",", " "), f"{PROVISION_RISQUE_PCT*100:.0f}%")
 
-    gb1, gb2 = st.columns(2)
-    with gb1:
-        st.markdown("**Coût par profil**")
-        st.plotly_chart(build_budget_chart(st.session_state.taches, equipe_index,
-                                            st.session_state.config["jours_par_semaine"]),
-                        use_container_width=True)
-    with gb2:
-        st.markdown("**Répartition par module**")
-        st.plotly_chart(build_cat_chart(st.session_state.taches, equipe_index,
-                                         st.session_state.config["jours_par_semaine"]),
-                        use_container_width=True)
-
-    st.markdown("**Tableau récapitulatif**")
-    df_budget = build_budget_dataframe(st.session_state.taches, equipe_index,
-                                        st.session_state.config["jours_par_semaine"])
-    def style_total(row):
-        return ["font-weight:bold;background:#E8EAF2"]*len(row) if row["Profil"]=="TOTAL" else [""]*len(row)
-    st.dataframe(
-        df_budget.style.apply(style_total, axis=1).format({"Coût (€)":"{:,}","Part (%)":"{:.1f}"}),
-        use_container_width=True, hide_index=True,
+    st.divider()
+    
+    col_donut, col_sat = st.columns([1, 1])
+    
+    with col_donut:
+        st.markdown("#### Répartition du Budget Global")
+        import plotly.graph_objects as go
+        fig_donut = go.Figure(go.Pie(
+            labels=["Budget RH", "Coûts Satellites", "Provision Risques"],
+            values=[total_rh, total_sat, provision],
+            hole=0.5,
+            marker=dict(colors=["#1D9E75", "#378ADD", "#E24B4A"])
+        ))
+        fig_donut.update_layout(height=320, margin=dict(l=0, r=0, t=20, b=0), font=dict(size=12))
+        st.plotly_chart(fig_donut, use_container_width=True)
+        
+    with col_sat:
+        st.markdown("#### Détail des Coûts Satellites")
+        df_sat = pd.DataFrame(COUTS_SATELLITES)[["nom", "categorie", "montant"]]
+        df_sat.columns = ["Nom", "Catégorie", "Montant (€)"]
+        st.dataframe(df_sat.style.format({"Montant (€)": "{:,}"}), use_container_width=True, hide_index=True)
+        st.caption("Frais fixes, abonnements et dépenses annexes indispensables au projet.")
+        
+    st.divider()
+    
+    st.markdown("#### 📅 Phasage Mensuel du Budget")
+    fig_phasage = build_phasage_mensuel_chart(
+        st.session_state.taches, equipe_index,
+        st.session_state.config["date_debut"], st.session_state.config["jours_par_semaine"],
+        COUTS_SATELLITES
     )
+    st.plotly_chart(fig_phasage, use_container_width=True)
+    
+    with st.expander("📊 Voir la décomposition avancée du budget RH"):
+        gb1, gb2 = st.columns(2)
+        with gb1:
+            st.markdown("**Coût par profil**")
+            st.plotly_chart(build_budget_chart(st.session_state.taches, equipe_index,
+                                                st.session_state.config["jours_par_semaine"]),
+                            use_container_width=True)
+        with gb2:
+            st.markdown("**Répartition par module**")
+            st.plotly_chart(build_cat_chart(st.session_state.taches, equipe_index,
+                                             st.session_state.config["jours_par_semaine"]),
+                            use_container_width=True)
+    
+        st.markdown("**Tableau récapitulatif RH**")
+        df_budget = build_budget_dataframe(st.session_state.taches, equipe_index,
+                                            st.session_state.config["jours_par_semaine"])
+        def style_total(row):
+            return ["font-weight:bold;background:#E8EAF2"]*len(row) if row["Profil"]=="TOTAL" else [""]*len(row)
+        st.dataframe(
+            df_budget.style.apply(style_total, axis=1).format({"Coût (€)":"{:,}","Part (%)":"{:.1f}"}),
+            use_container_width=True, hide_index=True,
+        )
 
 # ════════════════════════════════════════════════════════════
 # ÉQUIPE

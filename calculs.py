@@ -183,12 +183,16 @@ def build_gantt_figure(taches: list[dict], equipe_index: dict,
     rows = []
     for t in taches_triees:
         res      = equipe_index.get(t["res"], {})
-        debut_dt = semaine_vers_date(t["semaine"], date_debut)
-        fin_dt   = semaine_vers_date(t["semaine"] + t["duree"], date_debut)
+        decalage = timedelta(days=t.get("decalage_jours", 0))
+        debut_dt = semaine_vers_date(t["semaine"], date_debut) + decalage
+        fin_dt   = semaine_vers_date(t["semaine"] + t["duree"], date_debut) + decalage
         jh       = calcul_jh_tache(t, jours_par_semaine)
         cout     = calcul_cout_tache(t, equipe_index, jours_par_semaine)
         deps_str = ", ".join(f"#{d}" for d in t["deps"]) if t["deps"] else "—"
 
+        decalage = t.get("decalage_jours", 0)
+        retard_str = f"<br><span style='color:#E24B4A'><b>⚠️ Décalage : +{decalage} jours</b></span>" if decalage > 0 else ""
+        
         rows.append({
             "Tâche":    label_par_id[t["id"]],
             "Début":    debut_dt,
@@ -206,6 +210,7 @@ def build_gantt_figure(taches: list[dict], equipe_index: dict,
                 f"Coût estimé : {int(cout):,} €<br>"
                 f"Dépendances : {deps_str}"
                 + ("<br><b>⚡ Chemin critique</b>" if t.get("critique") else "")
+                + retard_str
             ),
         })
 
@@ -244,9 +249,10 @@ def build_gantt_figure(taches: list[dict], equipe_index: dict,
 
         dates_par_id: dict[int, dict] = {}
         for t in taches:
+            decalage = timedelta(days=t.get("decalage_jours", 0))
             dates_par_id[t["id"]] = {
-                "debut": semaine_vers_date(t["semaine"], date_debut),
-                "fin":   semaine_vers_date(t["semaine"] + t["duree"], date_debut),
+                "debut": semaine_vers_date(t["semaine"], date_debut) + decalage,
+                "fin":   semaine_vers_date(t["semaine"] + t["duree"], date_debut) + decalage,
             }
 
         taches_par_id = {t["id"]: t for t in taches}
@@ -446,5 +452,84 @@ def build_charge_chart(taches: list[dict], equipe_index: dict,
         plot_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
         font=dict(size=11),
+    )
+    return fig
+
+
+def build_phasage_mensuel_chart(taches: list[dict], equipe_index: dict,
+                                date_debut: str, jours_par_semaine: int,
+                                couts_satellites: list[dict]) -> go.Figure:
+    """
+    Histogramme empilé du budget par mois : part RH et part Satellites.
+    """
+    from dateutil.relativedelta import relativedelta
+    import calendar
+    
+    # Dictionnaire des mois : "YYYY-MM" -> {"RH": 0.0, "Satellites": 0.0}
+    mois_data = {}
+    
+    # 1. Ventilation des coûts RH
+    for t in taches:
+        cout_total_tache = calcul_cout_tache(t, equipe_index, jours_par_semaine)
+        if cout_total_tache == 0:
+            continue
+        
+        cout_par_semaine = cout_total_tache / t["duree"]
+        
+        for s in range(t["semaine"], t["semaine"] + t["duree"]):
+            date_s = semaine_vers_date(s, date_debut)
+            cle_mois = date_s.strftime("%Y-%m")
+            if cle_mois not in mois_data:
+                mois_data[cle_mois] = {"RH": 0.0, "Satellites": 0.0}
+            mois_data[cle_mois]["RH"] += cout_par_semaine
+
+    # 2. Ventilation des coûts Satellites (lissés sur la durée du projet ou affectés au M1)
+    # Pour simplifier, on divise le coût satellite total sur la durée en mois du projet
+    if mois_data:
+        cles_triees = sorted(list(mois_data.keys()))
+        nb_mois = len(cles_triees)
+        total_satellites = sum(sat["montant"] for sat in couts_satellites)
+        
+        sat_par_mois = total_satellites / nb_mois if nb_mois > 0 else 0
+        for cle in cles_triees:
+            mois_data[cle]["Satellites"] += sat_par_mois
+            
+    # Préparation données Plotly
+    cles_triees = sorted(list(mois_data.keys()))
+    labels_mois = []
+    for c in cles_triees:
+        dt = datetime.strptime(c, "%Y-%m")
+        nom_mois = calendar.month_abbr[dt.month]
+        labels_mois.append(f"{nom_mois} {dt.year}")
+        
+    valeurs_rh = [mois_data[c]["RH"] for c in cles_triees]
+    valeurs_sat = [mois_data[c]["Satellites"] for c in cles_triees]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=labels_mois, y=valeurs_rh,
+        name="Coûts RH",
+        marker_color="#1D9E75",
+        text=[f"{int(v):,} €".replace(",", " ") if v > 0 else "" for v in valeurs_rh],
+        textposition="inside"
+    ))
+    fig.add_trace(go.Bar(
+        x=labels_mois, y=valeurs_sat,
+        name="Coûts Satellites",
+        marker_color="#E24B4A",
+        text=[f"{int(v):,} €".replace(",", " ") if v > 0 else "" for v in valeurs_sat],
+        textposition="inside"
+    ))
+    
+    fig.update_layout(
+        barmode='stack',
+        height=350,
+        xaxis=dict(title="Mois", tickfont_size=11),
+        yaxis=dict(title="Budget projeté (€)", gridcolor="#E8EAF0"),
+        margin=dict(l=10, r=20, t=20, b=30),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        font=dict(size=11)
     )
     return fig
