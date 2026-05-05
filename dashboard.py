@@ -196,7 +196,8 @@ def build_dashboard_tab(taches, equipe_index, config):
         }
     ))
     fig_cpi.update_layout(height=200, margin=dict(l=10, r=10, t=30, b=10))
-    c5.plotly_chart(fig_cpi, use_container_width=True, help="Supérieur à 1 : Le projet coûte moins cher que prévu. Inférieur à 1 : Surcoûts constatés.")
+    c5.plotly_chart(fig_cpi, use_container_width=True)
+    st.caption("Efficacité budgétaire : > 1 = Moins cher que prévu. < 1 = Surcoûts constatés.")
     
     # Jauge Tenue des Délais (ex-SPI)
     fig_spi = go.Figure(go.Indicator(
@@ -213,7 +214,8 @@ def build_dashboard_tab(taches, equipe_index, config):
         }
     ))
     fig_spi.update_layout(height=200, margin=dict(l=10, r=10, t=30, b=10))
-    c6.plotly_chart(fig_spi, use_container_width=True, help="Supérieur à 1 : Projet en avance. Inférieur à 1 : Retard constaté par rapport au planning initial.")
+    c6.plotly_chart(fig_spi, use_container_width=True)
+    st.caption("Tenue des délais : > 1 = En avance. < 1 = Retard constaté.")
     
     c7.metric("Surcoût lié aux Aléas (Risques purs)", f"{int(couts_non_planifies):,} €".replace(",", " "), "Factures non prévues", delta_color="inverse")
     c8.metric("Surcoût lié à l'équipe (Météo/Temps)", f"{int(surcout_meteo_total):,} €".replace(",", " "), "Baisse de productivité", delta_color="inverse")
