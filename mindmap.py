@@ -113,25 +113,25 @@ def build_mindmap_tab():
   <meta charset="UTF-8" />
   <style>
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    html, body {{ width: 100%; height: 100%; background: #F8FAFF; overflow: hidden; }}
+    html, body {{ width: 100%; height: 100%; background: #ffffff; overflow: hidden; }}
     #mindmap {{ width: 100%; height: 100%; }}
 
-    /* ── Liens visibles et épais ── */
+    /* ── Liens visibles ── */
     .markmap-link {{
-      stroke-width: 2.5px !important;
-      stroke-opacity: 0.85 !important;
+      stroke-width: 2px !important;
+      stroke-opacity: 0.6 !important;
     }}
 
-    /* ── Nœuds avec fond coloré (pilule) ── */
-    .markmap-foreign > div {{
+    /* ── Style par défaut des nœuds (Texte sombre pour être visible sur blanc) ── */
+    .markmap-foreign div {{
       display: inline-block;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 12px;
-      font-weight: 600;
-      color: #fff !important;
-      white-space: nowrap;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1e293b !important; /* Sombre par défaut */
+      transition: all 0.3s;
     }}
   </style>
 </head>
@@ -147,31 +147,16 @@ def build_mindmap_tab():
       const {{ Transformer }} = window.markmap;
 
       const BRANCH_COLORS = [
-        '#4F46E5', // indigo (racine)
-        '#059669', // vert émeraude
-        '#D97706', // ambre
-        '#DB2777', // rose fuchsia
-        '#0891B2', // cyan
-        '#7C3AED', // violet
-        '#B45309', // brun doré
-        '#065F46', // vert forêt
-        '#9D174D', // bordeaux
-        '#1D4ED8', // bleu royal
-        '#B91C1C', // rouge
-        '#0369A1', // bleu acier
+        '#4F46E5', '#059669', '#D97706', '#DB2777',
+        '#0891B2', '#7C3AED', '#B45309', '#065F46',
+        '#9D174D', '#1D4ED8'
       ];
 
-      // Colorier toutes les cellules d'un sous-arbre de la même couleur de branche
       function assignColors(node, palette, parentColor, rootIdx) {{
         let color;
-        if (node.depth === 0) {{
-          color = '#1e1b4b'; // nœud central très foncé
-        }} else if (node.depth === 1) {{
-          color = palette[rootIdx % palette.length];
-          rootIdx++;
-        }} else {{
-          color = parentColor;
-        }}
+        if (node.depth === 0) color = '#0f172a';
+        else if (node.depth === 1) {{ color = palette[rootIdx % palette.length]; rootIdx++; }}
+        else color = parentColor;
         node._color = color;
         if (node.children) {{
           node.children.forEach((child, i) => assignColors(child, palette, color, node.depth === 0 ? i : rootIdx));
@@ -186,44 +171,45 @@ def build_mindmap_tab():
       if (styles) loadCSS(styles);
       if (scripts) await loadJS(scripts, {{ getMarkmap: () => window.markmap }});
 
-      // Attribuer les couleurs
       assignColors(root, BRANCH_COLORS, '#4F46E5', 0);
 
       const mm = Markmap.create('#mindmap', {{
         autoFit: true,
-        fitRatio: 0.98,
-        duration: 350,
-        nodeMinHeight: 20,
-        spacingVertical: 5,
-        spacingHorizontal: 70,
-        paddingX: 8,
+        fitRatio: 0.95,
+        duration: 300,
+        nodeMinHeight: 18,
+        spacingVertical: 10,
+        spacingHorizontal: 60,
+        paddingX: 10,
         color: (node) => node._color || '#4F46E5',
       }}, root);
 
-      // Colorier les fonds des nœuds en SVG foreignObject après rendu
-      function colorNodes() {{
-        document.querySelectorAll('.markmap-node').forEach(g => {{
-          const foreignEl = g.querySelector('foreignObject > div > div');
-          if (!foreignEl) return;
-          // Récupérer la couleur du cercle de ce nœud
-          const circle = g.querySelector('circle');
-          if (!circle) return;
-          const fill = circle.getAttribute('fill') || circle.style.fill || '#4F46E5';
-          foreignEl.style.background = fill;
-          foreignEl.style.color = '#fff';
-          foreignEl.style.borderRadius = '20px';
-          foreignEl.style.padding = '2px 10px';
-          foreignEl.style.fontWeight = '600';
-          foreignEl.style.fontSize = '12px';
+      // Appliquer les pastilles de couleur sur le texte
+      function styleNodes() {{
+        document.querySelectorAll('.markmap-foreign div').forEach(div => {{
+          // Trouver le cercle associé (dans le même groupe g)
+          let parentG = div.closest('.markmap-node');
+          if (parentG) {{
+            let circle = parentG.querySelector('circle');
+            if (circle) {{
+              let color = circle.getAttribute('fill');
+              div.style.background = color;
+              div.style.color = '#ffffff'; // Texte blanc sur fond coloré
+              div.style.borderRadius = '12px';
+              div.style.padding = '4px 12px';
+              div.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            }}
+          }}
         }});
       }}
 
-      // Lancer après un court délai (rendu asynchrone)
-      setTimeout(colorNodes, 600);
-      setTimeout(colorNodes, 1200);
-
-      // Rafraîchir les couleurs à chaque clic (déplier/replier)
-      document.getElementById('mindmap').addEventListener('click', () => setTimeout(colorNodes, 400));
+      // Répéter pour gérer le rendu asynchrone de Markmap
+      setTimeout(styleNodes, 500);
+      setTimeout(styleNodes, 1500);
+      
+      // Observer les changements pour maintenir le style lors des interactions
+      const observer = new MutationObserver(styleNodes);
+      observer.observe(document.getElementById('mindmap'), {{ childList: true, subtree: true }});
     }})();
   </script>
 </body>
