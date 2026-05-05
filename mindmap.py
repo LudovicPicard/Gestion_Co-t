@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 
 MINDMAP_MARKDOWN = """
-# Budget Book One — Mvp Livres à 1€
+# Coûts associés au projet Book One
 ## 🧑‍💼 Coûts Humains
 ### Équipe Projet
 - Sophie Lambert — Chef de Projet
@@ -16,16 +16,16 @@ MINDMAP_MARKDOWN = """
 ### Parties Prenantes
 - Marie Leroy — Responsable RH
 - Pierre Duval — Product Owner
-- Claire Morin — RSI / DPO
+- Claire Morin — RSSI / DPO
 - Antoine Blanc — Direction Financière
 ### Consultants Externes
 - Marc Fontaine — Consultant MOE
 - Julie Renard — Freelance Sécurité
 - Paul Girard — Auditeur Externe
 ### Éléments de Coûts Associés
-- Avantages en nature (tickets resto, mutuelle…)
+- Avantages en nature (Tickets Resto, Mutuelle…)
 - Frais de déplacement remboursés
-- Primes et bonus
+- Primes et Bonus
 ## ☁️ Infra & Cloud
 - Hébergement AWS (EC2)
 - Base de données (RDS/PostgreSQL)
@@ -38,7 +38,7 @@ MINDMAP_MARKDOWN = """
 - Monitoring (Cloudwatch)
 ## 💻 Logiciels
 ### Outils de Développement
-- Licences IDE · Xcode · Android Studio · Postman · TestFlight
+- Licences IDE · Xcode · Android Studio · Postman · Testflight
 ### Outils de Design
 - Figma · Adobe XD · Miro
 ### APIs & Intégrations
@@ -50,37 +50,6 @@ MINDMAP_MARKDOWN = """
 - Slack · Notion
 ### Collaboration Code
 - Github · Gitlab · CI/CD Pipeline
-## 💸 Coûts Financiers
-- Assurances Startup
-- Frais Juridiques
-- Financement & Prêts
-- Frais Bancaires Stripe
-## 🔒 Coûts Paiement & Sécurité
-- Stripe 1€/Transaction
-- Certificat SSL
-- Conformité RGPD
-- Audit Sécurité
-- Licences Droits d'Usage
-## ⚙️ Coûts Opérationnels
-### Technique
-- Communication Externe
-- Support Utilisateurs
-- Maintenance & Monitoring
-### Financier
-- Gestion Des Risques
-- Provisions Imprévus 10%
-- Outils Tests Cypress
-## 🧪 Coûts Tests & Qualité
-- Tests Unitaires & Intégration
-- Beta Testing Utilisateurs
-- Audit Qualité Code
-- Amélioration Continue
-## 🚀 Coûts Déploiement & Stores
-- Apple App Store (99$/an)
-- Google Play (25$)
-- Environnement Staging
-- Monitoring Post-Launch
-- Firebase Notifications Push
 ## 📣 Coûts Communication & Marketing
 ### Communication Externe
 - Site Web & Landing Page
@@ -99,6 +68,38 @@ MINDMAP_MARKDOWN = """
 - Événement Lancement
 - Beta Testeurs
 - Ambassadeurs Lecteurs
+## 🚀 Coûts Déploiement & Stores
+- Apple App Store 99$/an
+- Google Play 25$
+- Environnement Staging
+- Monitoring Post-Launch
+- Firebase Notifications Push
+## 🧪 Coûts Tests & Qualité
+- Outils Tests Cypress
+- Tests Unitaires & Intégration
+- Beta Testing Utilisateurs
+- Audit Qualité Code
+- Amélioration Continue
+## ⚙️ Coûts Opérationnels
+### Fonctionnement Quotidien
+- Communication Externe
+- Support Utilisateurs
+### Technique
+- Maintenance & Monitoring
+- Gestion Des Risques
+### Financier
+- Provisions Imprévus 10%
+## 🔒 Coûts Paiement & Sécurité
+- Stripe 1€/Transaction
+- Certificat SSL
+- Conformité RGPD
+- Audit Sécurité
+- Licences Droits d'Usage
+## 💸 Coûts Financiers
+- Assurances Startup
+- Frais Juridiques
+- Financement & Prêts
+- Frais Bancaires Stripe
 """
 
 
@@ -106,7 +107,7 @@ def build_mindmap_tab():
     st.markdown("### 🧠 Mindmap — Budget Book One")
     st.caption("Visualisation interactive. Cliquez sur un nœud pour déplier/replier une branche. Molette pour zoomer.")
 
-    html = f"""
+    html = f'''
 <!DOCTYPE html>
 <html>
 <head>
@@ -119,19 +120,19 @@ def build_mindmap_tab():
     /* ── Liens visibles ── */
     .markmap-link {{
       stroke-width: 2px !important;
-      stroke-opacity: 0.6 !important;
+      stroke-opacity: 0.5 !important;
     }}
 
-    /* ── Style par défaut des nœuds (Texte sombre pour être visible sur blanc) ── */
+    /* ── Style par défaut des nœuds ── */
     .markmap-foreign div {{
       display: inline-block;
       padding: 2px 8px;
       border-radius: 4px;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 500;
-      color: #1e293b !important; /* Sombre par défaut */
-      transition: all 0.3s;
+      color: #1e293b !important;
+      transition: all 0.2s;
     }}
   </style>
 </head>
@@ -146,10 +147,18 @@ def build_mindmap_tab():
       const {{ Markmap, loadCSS, loadJS }} = window.markmap;
       const {{ Transformer }} = window.markmap;
 
+      // Couleurs basées sur l'image fournie
       const BRANCH_COLORS = [
-        '#4F46E5', '#059669', '#D97706', '#DB2777',
-        '#0891B2', '#7C3AED', '#B45309', '#065F46',
-        '#9D174D', '#1D4ED8'
+        '#8b5cf6', // Humains (Violet)
+        '#d946ef', // Infra (Magenta)
+        '#f43f5e', // Logiciels (Rose/Rouge)
+        '#f97316', // Gestion (Orange)
+        '#3b82f6', // Marketing (Bleu)
+        '#06b6d4', // Stores (Cyan)
+        '#10b981', // QA (Vert)
+        '#84cc16', // Opé (Lime)
+        '#eab308', // Paiement (Jaune)
+        '#f59e0b'  // Finance (Or)
       ];
 
       function assignColors(node, palette, parentColor, rootIdx) {{
@@ -177,43 +186,40 @@ def build_mindmap_tab():
         autoFit: true,
         fitRatio: 0.95,
         duration: 300,
-        nodeMinHeight: 18,
-        spacingVertical: 10,
-        spacingHorizontal: 60,
-        paddingX: 10,
+        nodeMinHeight: 16,
+        spacingVertical: 8,
+        spacingHorizontal: 50,
+        paddingX: 8,
         color: (node) => node._color || '#4F46E5',
       }}, root);
 
-      // Appliquer les pastilles de couleur sur le texte
       function styleNodes() {{
         document.querySelectorAll('.markmap-foreign div').forEach(div => {{
-          // Trouver le cercle associé (dans le même groupe g)
           let parentG = div.closest('.markmap-node');
           if (parentG) {{
             let circle = parentG.querySelector('circle');
             if (circle) {{
               let color = circle.getAttribute('fill');
               div.style.background = color;
-              div.style.color = '#ffffff'; // Texte blanc sur fond coloré
-              div.style.borderRadius = '12px';
-              div.style.padding = '4px 12px';
-              div.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+              div.style.color = '#ffffff';
+              div.style.borderRadius = '10px';
+              div.style.padding = '3px 10px';
+              div.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+              div.style.fontSize = '11px';
             }}
           }}
         }});
       }}
 
-      // Répéter pour gérer le rendu asynchrone de Markmap
       setTimeout(styleNodes, 500);
       setTimeout(styleNodes, 1500);
       
-      // Observer les changements pour maintenir le style lors des interactions
       const observer = new MutationObserver(styleNodes);
       observer.observe(document.getElementById('mindmap'), {{ childList: true, subtree: true }});
     }})();
   </script>
 </body>
 </html>
-"""
+'''
 
     components.html(html, height=900, scrolling=False)
