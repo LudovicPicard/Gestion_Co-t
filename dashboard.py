@@ -312,7 +312,7 @@ def build_dashboard_tab(taches, equipe_index, config):
         config["date_debut"], config["jours_par_semaine"],
         COUTS_SATELLITES
     )
-    st.plotly_chart(fig_phasage, use_container_width=True)
+    st.plotly_chart(fig_phasage, use_container_width=True, key="phasage_dashboard")
 
     st.divider()
     # ── 4. GANTT COMPARATIF ──────────────────────────────────────────

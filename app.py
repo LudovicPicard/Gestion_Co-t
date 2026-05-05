@@ -324,7 +324,7 @@ with tab_budget:
         st.session_state.config["date_debut"], st.session_state.config["jours_par_semaine"],
         COUTS_SATELLITES
     )
-    st.plotly_chart(fig_phasage, use_container_width=True)
+    st.plotly_chart(fig_phasage, use_container_width=True, key="phasage_budget")
     
     with st.expander("📊 Voir la décomposition avancée du budget RH"):
         gb1, gb2 = st.columns(2)
