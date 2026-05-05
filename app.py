@@ -22,6 +22,7 @@ from calculs import (
 )
 from dashboard import build_dashboard_tab
 from chatbot import open_chatbot_dialog
+from mindmap import build_mindmap_tab
 
 st.set_page_config(
     page_title="Pilotage RH — Book One",
@@ -167,7 +168,7 @@ st.markdown("""
 }
 </style>
 <div id="ai-fab-container">
-  <a href="?open_chat=1">🤖 Assistant IA</a>
+  <a href="#" onclick="window.parent.history.pushState({},'','?open_chat=1'); window.parent.location.reload(); return false;">🤖 Assistant IA</a>
 </div>
 """, unsafe_allow_html=True)
 
@@ -216,8 +217,8 @@ c5.metric("Budget Global", f"{int(budget_global_filtre):,} €".replace(",", " "
 
 st.divider()
 
-tab_gantt, tab_taches, tab_budget, tab_equipe, tab_dashboard = st.tabs([
-    "📊 Gantt", "📝 Tâches", "💰 Budget", "👥 Équipe", "📈 Dashboard"
+tab_gantt, tab_taches, tab_budget, tab_equipe, tab_dashboard, tab_mindmap = st.tabs([
+    "📊 Gantt", "📝 Tâches", "💰 Budget", "👥 Équipe", "📈 Dashboard", "🧠 Mindmap"
 ])
 
 # ════════════════════════════════════════════════════════════
@@ -565,3 +566,9 @@ with tab_equipe:
 # ════════════════════════════════════════════════════════════
 with tab_dashboard:
     build_dashboard_tab(taches_filtrees, equipe_index, st.session_state.config)
+
+# ════════════════════════════════════════════════════════════
+# MINDMAP
+# ════════════════════════════════════════════════════════════
+with tab_mindmap:
+    build_mindmap_tab()
