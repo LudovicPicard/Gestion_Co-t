@@ -25,17 +25,51 @@ PROJECT_CONFIG = {
 # ─────────────────────────────────────────────────────────────
 
 COUTS_SATELLITES = [
-    {"id": "SAT_1", "nom": "Infrastructure Cloud (AWS)", "montant": 4500, "categorie": "Tech"},
-    {"id": "SAT_2", "nom": "API OCR & Géolocalisation", "montant": 2000, "categorie": "Tech"},
-    {"id": "SAT_3", "nom": "Comptes Développeurs (Apple/Google)", "montant": 150, "categorie": "Admin"},
-    {"id": "SAT_4", "nom": "Campagne Marketing (Lancement)", "montant": 8000, "categorie": "Marketing"},
-    {"id": "SAT_5", "nom": "Frais Juridiques (CGU/Stripe)", "montant": 2500, "categorie": "Admin"},
+    # ── Infra & Cloud ──────────────────────────────────────────
+    {"id": "SAT_AWS",  "nom": "Hébergement AWS (EC2)",              "montant": 3600, "categorie": "Infra & Cloud"},
+    {"id": "SAT_RDS",  "nom": "Base de données (RDS/PostgreSQL)",   "montant": 1200, "categorie": "Infra & Cloud"},
+    {"id": "SAT_S3",   "nom": "Stockage images (S3)",               "montant":  600, "categorie": "Infra & Cloud"},
+    {"id": "SAT_CDN",  "nom": "CDN (CloudFront)",                   "montant":  400, "categorie": "Infra & Cloud"},
+    {"id": "SAT_GEO",  "nom": "API Géolocalisation (Google Maps)",  "montant":  800, "categorie": "Infra & Cloud"},
+    {"id": "SAT_FBK",  "nom": "Firebase (Notifications + Auth)",    "montant":  600, "categorie": "Infra & Cloud"},
+    {"id": "SAT_STG",  "nom": "Environnement Staging",              "montant":  400, "categorie": "Infra & Cloud"},
+    {"id": "SAT_CLD",  "nom": "Monitoring (Cloudwatch)",            "montant":  300, "categorie": "Infra & Cloud"},
+    # ── Logiciels ──────────────────────────────────────────────
+    {"id": "SAT_IDE",  "nom": "Licences IDE & Outils Dev",          "montant":  800, "categorie": "Logiciels"},
+    {"id": "SAT_DES",  "nom": "Figma / Adobe XD / Miro",            "montant":  600, "categorie": "Logiciels"},
+    {"id": "SAT_ISBN", "nom": "API Google Books (ISBN)",             "montant":  400, "categorie": "Logiciels"},
+    # ── Outils de Gestion ──────────────────────────────────────
+    {"id": "SAT_PM",   "nom": "Jira / Trello (Gestion projet)",     "montant":  400, "categorie": "Outils Gestion"},
+    {"id": "SAT_COM",  "nom": "Slack / Notion (Communication)",     "montant":  240, "categorie": "Outils Gestion"},
+    {"id": "SAT_GIT",  "nom": "Github / Gitlab (CI/CD Pipeline)",   "montant":  240, "categorie": "Outils Gestion"},
+    # ── Paiement & Sécurité ────────────────────────────────────
+    {"id": "SAT_STR",  "nom": "Stripe 1€/Transaction (commissions)","montant": 2000, "categorie": "Paiement & Sécurité"},
+    {"id": "SAT_SSL",  "nom": "Certificat SSL",                     "montant":  150, "categorie": "Paiement & Sécurité"},
+    {"id": "SAT_RGP",  "nom": "Conformité RGPD (audit)",            "montant": 1500, "categorie": "Paiement & Sécurité"},
+    {"id": "SAT_SEC",  "nom": "Audit Sécurité",                     "montant": 2000, "categorie": "Paiement & Sécurité"},
+    # ── Coûts Financiers ───────────────────────────────────────
+    {"id": "SAT_ASS",  "nom": "Assurances Startup",                 "montant": 1200, "categorie": "Coûts Financiers"},
+    {"id": "SAT_JUR",  "nom": "Frais Juridiques (CGU, mentions)",   "montant": 2500, "categorie": "Coûts Financiers"},
+    {"id": "SAT_BAN",  "nom": "Frais Bancaires Stripe",             "montant":  300, "categorie": "Coûts Financiers"},
+    # ── Communication & Marketing ──────────────────────────────
+    {"id": "SAT_WEB",  "nom": "Site Web & Landing Page",            "montant": 2000, "categorie": "Communication & Marketing"},
+    {"id": "SAT_ADS",  "nom": "Meta / Google Ads",                  "montant": 4000, "categorie": "Communication & Marketing"},
+    {"id": "SAT_ASO",  "nom": "ASO App Store",                      "montant":  800, "categorie": "Communication & Marketing"},
+    {"id": "SAT_BRA",  "nom": "Branding & Logo",                    "montant": 1500, "categorie": "Communication & Marketing"},
+    {"id": "SAT_VID",  "nom": "Vidéo Démo",                         "montant": 2000, "categorie": "Communication & Marketing"},
+    # ── Déploiement & Stores ───────────────────────────────────
+    {"id": "SAT_APP",  "nom": "Apple App Store (99$/an)",           "montant":   99, "categorie": "Déploiement & Stores"},
+    {"id": "SAT_GOO",  "nom": "Google Play (25$ one-shot)",         "montant":   25, "categorie": "Déploiement & Stores"},
+    {"id": "SAT_MON",  "nom": "Monitoring Post-Launch",             "montant":  600, "categorie": "Déploiement & Stores"},
+    # ── Tests & Qualité ────────────────────────────────────────
+    {"id": "SAT_CYP",  "nom": "Outils Tests Cypress / TestFlight",  "montant":  600, "categorie": "Tests & Qualité"},
+    {"id": "SAT_AUD",  "nom": "Audit Qualité Code",                 "montant": 1500, "categorie": "Tests & Qualité"},
 ]
 
 PROVISION_RISQUE_PCT = 0.15 # 15% du budget total (RH + Satellites)
 
 # ─────────────────────────────────────────────────────────────
-# ÉQUIPE TECHNIQUE — 9 profils
+# ÉQUIPE TECHNIQUE — 9 profils (noms issus du Mindmap)
 #
 # Champs :
 #   id         : clé unique utilisée dans les tâches (champ `res`)
@@ -87,17 +121,17 @@ STATUT_DEFAULT_PAR_TYPE = {
 }
 
 EQUIPE = [
-    # taux_jour = (salaire_brut_jour) * (1 + taux_charges)
-    # salaire_brut_jour = salaire_brut_annuel / jours_ouvres_par_an
-    {"id": "PM",  "label": "Chef de projet",      "type": "CDI",       "statut": "Cadre",     "salaire_brut_annuel": 70000,  "couleur": "7F77DD"},
-    {"id": "TL",  "label": "Tech Lead",            "type": "CDI",       "statut": "Cadre",     "salaire_brut_annuel": 80000,  "couleur": "534AB7"},
-    {"id": "BE",  "label": "Dev Back-End",         "type": "CDI",       "statut": "ETAM",      "salaire_brut_annuel": 55000,  "couleur": "1D9E75"},
-    {"id": "MOB", "label": "Dev Mobile",           "type": "CDI",       "statut": "ETAM",      "salaire_brut_annuel": 58000,  "couleur": "378ADD"},
-    {"id": "UX",  "label": "UX Designer",          "type": "CDI",       "statut": "ETAM",      "salaire_brut_annuel": 52000,  "couleur": "BA7517"},
-    {"id": "QA",  "label": "QA Engineer",          "type": "CDI",       "statut": "ETAM",      "salaire_brut_annuel": 48000,  "couleur": "D4537E"},
-    {"id": "STG", "label": "Stagiaire Dev",        "type": "STAGIAIRE", "statut": "Stagiaire", "salaire_brut_annuel": 7800,   "couleur": "888780"},
-    {"id": "ALT", "label": "Alternant Dev",        "type": "ALTERNANT", "statut": "Alternant", "salaire_brut_annuel": 18000,  "couleur": "B4B2A9"},
-    {"id": "FRL", "label": "Freelance UX / Sécu", "type": "FREELANCE", "statut": "Freelance", "salaire_brut_annuel": 155000, "couleur": "E24B4A"},
+    # ── Équipe Projet (Mindmap) ──────────────────────────────────
+    {"id": "PM",  "label": "Sophie Lambert — Chef de Projet",    "type": "CDI",       "statut": "Cadre",     "salaire_brut_annuel": 70000,  "couleur": "7F77DD"},
+    {"id": "TL",  "label": "Thomas Martin — Dev Senior Backend", "type": "CDI",       "statut": "Cadre",     "salaire_brut_annuel": 80000,  "couleur": "534AB7"},
+    {"id": "MOB", "label": "Lucas Bernard — Dev Mobile",        "type": "FREELANCE", "statut": "Freelance", "salaire_brut_annuel": 120000, "couleur": "378ADD"},
+    {"id": "ALT", "label": "Emma Dupont — Alternante Front-End", "type": "ALTERNANT", "statut": "Alternant", "salaire_brut_annuel": 18000,  "couleur": "B4B2A9"},
+    {"id": "UX",  "label": "Hugo Petit — UX/UI Designer",       "type": "CDI",       "statut": "ETAM",      "salaire_brut_annuel": 52000,  "couleur": "BA7517"},
+    {"id": "BE",  "label": "Julien Roux — DevOps Engineer",     "type": "CDI",       "statut": "ETAM",      "salaire_brut_annuel": 58000,  "couleur": "1D9E75"},
+    {"id": "STG", "label": "Léa Moreau — Stagiaire QA",         "type": "STAGIAIRE", "statut": "Stagiaire", "salaire_brut_annuel": 7800,   "couleur": "888780"},
+    # ── Consultants Externes (Mindmap) ──────────────────────────
+    {"id": "MOE", "label": "Marc Fontaine — Consultant MOE",    "type": "FREELANCE", "statut": "Freelance", "salaire_brut_annuel": 150000, "couleur": "E24B4A"},
+    {"id": "FRL", "label": "Julie Renard — Freelance Sécurité", "type": "FREELANCE", "statut": "Freelance", "salaire_brut_annuel": 120000, "couleur": "D4537E"},
 ]
 
 # Index rapide : id -> dict ressource
@@ -176,7 +210,7 @@ TACHES_DEFAULT = [
     
     # ── M9 — Tests & QA ──────────────────────────────────────
     {"id": 26, "cat": "Tests & QA", "nom": "Tests unitaires & intégration", "res": "ALT", "semaine": 14, "duree": 3, "critique": False, "deps": [11, 14, 15], "complexite": "Moyenne"},
-    {"id": 27, "cat": "Tests & QA", "nom": "Beta testing & bugs",           "res": "QA",  "semaine": 16, "duree": 3, "critique": True,  "deps": [24, 25, 26], "complexite": "Haute"},
+    {"id": 27, "cat": "Tests & QA", "nom": "Beta testing & bugs",           "res": "STG",  "semaine": 16, "duree": 3, "critique": True,  "deps": [24, 25, 26], "complexite": "Haute"},
     
     # ── M10 — Déploiement ────────────────────────────────────
     {"id": 28, "cat": "Déploiement", "nom": "Déploiement iOS & Android", "res": "PM", "semaine": 19, "duree": 2, "critique": True, "deps": [27], "complexite": "Moyenne"},
